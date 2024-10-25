@@ -1,5 +1,5 @@
 .container {
-	background-color: white;
+	background-color: hsl(var(--secondary));
 	padding: 1rem;
 	border-top: 1px solid #e5e7eb;
 	display: flex;

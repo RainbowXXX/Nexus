@@ -1,5 +1,5 @@
 import { ipcRenderer } from "electron";
-import { CHROME_OPEN_DEVTOOLS_CHANNEL } from "./chrome-channels";
+import { CHROME_OPEN_DEVTOOLS_CHANNEL, CHROME_TEST_TOOLS_CHANNEL } from "./chrome-channels";
 
 const ipcHandler: IpcType = {
 	send(channel: any, value: any) {
@@ -20,5 +20,6 @@ export function exposeChromeContext() {
     contextBridge.exposeInMainWorld("chromeTools", {
 		ipc: ipcHandler,
         open_dev_tools: () => ipcRenderer.invoke(CHROME_OPEN_DEVTOOLS_CHANNEL),
+		test_for_feature: (...args: string[]) => ipcRenderer.invoke(CHROME_TEST_TOOLS_CHANNEL, ...args),
     });
 }

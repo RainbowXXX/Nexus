@@ -29,7 +29,7 @@
 }
 
 .otherMessageContent {
-	background-color: #e5e7eb;
+	background-color: hsl(var(--secondary));
 }
 
 .messageTime {

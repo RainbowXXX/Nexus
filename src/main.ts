@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from "electron";
+import { app, Menu, Tray, BrowserWindow } from "electron";
 import registerListeners from "./helpers/ipc/listeners-register";
 import path from "path";
 
@@ -6,7 +6,46 @@ import { DEFAULT_HEIGHT, DEFAULT_MIN_HEIGHT, DEFAULT_MIN_WIDTH, DEFAULT_WIDTH } 
 
 const inDevelopment = process.env.NODE_ENV === "development";
 
+let tray: Tray | null = null;
 let mainWindow: Electron.CrossProcessExports.BrowserWindow | null = null;
+
+// 定义菜单模板
+const menuTemplate: (Electron.MenuItemConstructorOptions | Electron.MenuItem)[] = [
+	{
+		label: '应用信息',
+		submenu: [
+			{ label: '关于', role: 'about' },
+			{ label: '检查更新...', click: () => { console.log('检查更新') } }
+		]
+	},
+	{ type: 'separator' },
+	{
+		label: '状态',
+		submenu: [
+			{ label: '在线', type: 'radio', checked: true },
+			{ label: '离开', type: 'radio' },
+			{ label: '勿扰', type: 'radio' }
+		]
+	},
+	{ type: 'separator' },
+	{
+		label: '操作',
+		submenu: [
+			{
+				label: '发送反馈',
+				accelerator: 'CmdOrCtrl+F',
+				click: () => { console.log('发送反馈') }
+			},
+			{
+				label: '设置',
+				accelerator: 'CmdOrCtrl+,',
+				click: () => { console.log('打开设置') }
+			}
+		]
+	},
+	{ type: 'separator' },
+	{ label: '退出', role: 'quit' }
+];
 
 if (require("electron-squirrel-startup")) {
 	app.quit();
@@ -39,6 +78,9 @@ function createWindow() {
 			path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`)
 		);
 	}
+
+	// 设置APP ID, 用于在通知显示
+	app.setAppUserModelId('Nexus');
 
 	if(mainWindow){
 		let window = mainWindow;
@@ -178,6 +220,13 @@ function createWindow() {
 	if(inDevelopment) {
 		mainWindow.webContents.openDevTools()
 	}
+
+	tray = new Tray('src/assets/images/icon.ico')
+	const contextMenu = Menu.buildFromTemplate(menuTemplate)
+
+	tray.setTitle('test tray')
+	tray.setToolTip('This is my application.')
+	tray.setContextMenu(contextMenu)
 }
 
 app.whenReady().then(createWindow);

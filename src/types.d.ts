@@ -45,6 +45,7 @@ interface ElectronWindow {
 interface ChromeTools {
 	ipc: IpcType;
 	open_dev_tools: () => Promise<void>;
+	test_for_feature: (...args: string[]) => Promise<any>;
 }
 
 declare interface Window {

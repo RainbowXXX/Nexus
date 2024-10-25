@@ -1,6 +1,6 @@
 .container {
 	width: 20rem;
-	background-color: white;
+	background-color: hsl(var(--background));
 	border-right: 1px solid #e5e7eb;
 }
 
@@ -33,11 +33,11 @@
 }
 
 .chatItem:hover {
-	background-color: #f3f4f6;
+	background-color: hsl(var(--destructive));
 }
 
 .selectedChat {
-	background-color: #eff6ff;
+	background-color: hsl(var(--secondary));
 }
 
 .avatar {
