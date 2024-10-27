@@ -87,7 +87,8 @@ function createWindow() {
 
 	if(mainWindow){
 		monutWindowExtension(mainWindow);
-		mountStore();
+		//TODO 检查修改是否错误
+		mountStore(mainWindow);
 	}
 
 	if(inDevelopment) {

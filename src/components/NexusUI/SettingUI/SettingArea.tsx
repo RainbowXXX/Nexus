@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SettingContext } from "@/components/Contexts/SettingsContext";
 
+import styles from "@/styles/NexusUI/Setting.module.css";
+
 export default function SettingArea() {
 	const settings = useContext(SettingContext);
 	const [serverUrl, setServerUrl] = useState(settings[0].serverAddress);
@@ -11,15 +13,14 @@ export default function SettingArea() {
 	return (
 		<div className="flex text-gray-300 bg-gray-900">
 			{/* Sidebar */}
-			<div className="w-48 bg-gray-800 p-4 flex flex-col">
-				<Button variant="ghost" className="justify-start mb-4">
+			<div className="w-48 bg-gray-800 p-4 flex flex-col gap-2">
+				<Button variant="ghost" className={`justify-start mb-4 ${styles.BackBottonHover}`}>
 					<ChevronLeft className="mr-2 h-4 w-4" />
 					返回
 				</Button>
-				<Button variant="ghost" className="justify-start" onClick={() => setSettingItem('通用')}>通用</Button>
-				<Button variant="secondary" className="justify-start"
+				<Button variant="ghost" className={`justify-start ${styles.navBottonHover} ${settingItem === '通用' ? styles.active : ''}`} onClick={() => setSettingItem('通用')}>通用</Button>
+				<Button variant="ghost" className={`justify-start ${styles.navBottonHover} ${settingItem === '外观' ? styles.active : ''}`}
 						onClick={() => setSettingItem('外观')}>外观</Button>
-				{/*<Button variant="ghost" className="justify-start mt-auto">关闭</Button>*/}
 			</div>
 
 			{/* Main content */}
