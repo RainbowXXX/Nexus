@@ -1,8 +1,10 @@
-import { app, Menu, Tray, BrowserWindow } from "electron";
+import { app, BrowserWindow, Menu, Tray } from "electron";
 import registerListeners from "./helpers/ipc/listeners-register";
 import path from "path";
 
 import { DEFAULT_HEIGHT, DEFAULT_MIN_HEIGHT, DEFAULT_MIN_WIDTH, DEFAULT_WIDTH } from "./constants/SharedConstants";
+import { monutWindowExtension } from "./extensions/windowExtension";
+import { mountStore, unmountStore } from "./extensions/storeExtension";
 
 const inDevelopment = process.env.NODE_ENV === "development";
 
@@ -47,9 +49,9 @@ const menuTemplate: (Electron.MenuItemConstructorOptions | Electron.MenuItem)[] 
 	{ label: '退出', role: 'quit' }
 ];
 
-if (require("electron-squirrel-startup")) {
+/*if (require("electron-squirrel-startup")) {
 	app.quit();
-}
+}*/
 
 function createWindow() {
 	const preload = path.join(__dirname, "preload.js");
@@ -67,6 +69,7 @@ function createWindow() {
 			preload: preload,
 		},
 		titleBarStyle: "hidden",
+		icon: 'src/assets/images/icon.ico',
 	});
 	registerListeners(mainWindow);
 
@@ -83,138 +86,8 @@ function createWindow() {
 	app.setAppUserModelId('Nexus');
 
 	if(mainWindow){
-		let window = mainWindow;
-
-		// 获取窗体信息
-		const getWindowInfo = (mainWindow: BrowserWindow): WindowStatus => {
-			const { width, height, x, y } = mainWindow.getBounds();
-			const isMaximized = mainWindow.isMaximized();
-			const isMinimized = mainWindow.isMinimized();
-			const isFullScreen = mainWindow.isFullScreen();
-			const title = mainWindow.getTitle();
-			const isResizable = mainWindow.isResizable();
-			const isVisible = mainWindow.isVisible();
-			const opacity = mainWindow.getOpacity();
-
-			return {
-				size: {
-					width: width,
-					height: height,
-				},
-				position: {
-					x: x,
-					y: y,
-				},
-				status: {
-					isMaximized,
-					isMinimized,
-					isFullScreen,
-					isResizable,
-					isVisible,
-				},
-				title: title,
-				opacity: opacity,
-			};
-		};
-		let windowStatus: WindowStatus = getWindowInfo(window);
-
-		const updateWindowInfo = (status: WindowStatus, reason: string): void => {
-			windowStatus = status;
-			window.webContents.send('set-window-status', reason, JSON.stringify(windowStatus));
-		};
-
-		window.webContents.on('did-finish-load', () => {
-			updateWindowInfo(windowStatus, 'init');
-		});
-
-		// 监听窗口大小变化
-		window.on('resize', () => {
-			const { width, height } = window.getBounds();
-			updateWindowInfo({
-				...windowStatus,
-				size: {
-					width: width,
-					height: height,
-				}
-			}, 'window-resize');
-		});
-
-		// 监听窗口位置变化
-		window.on('move', () => {
-			const { x, y } = window.getBounds();
-			updateWindowInfo({
-				...windowStatus,
-				position: {
-					x: x,
-					y: y,
-				}
-			}, 'window-move');
-		});
-
-		// 监听窗口最大化
-		window.on('maximize', () => {
-			updateWindowInfo({
-				...windowStatus,
-				status: {
-					...windowStatus.status,
-					isMaximized: true,
-				}
-			}, 'window-maximize');
-		});
-
-		// 监听窗口恢复
-		window.on('unmaximize', () => {
-			updateWindowInfo({
-				...windowStatus,
-				status: {
-					...windowStatus.status,
-					isMaximized: false,
-				}
-			}, 'window-unmaximize');
-		});
-
-		// 监听窗口最小化
-		window.on('minimize', () => {
-			updateWindowInfo({
-				...windowStatus,
-				status: {
-					...windowStatus.status,
-					isMinimized: true,
-				}
-			}, 'window-minimize');
-		});
-
-		// 监听窗口恢复
-		window.on('restore', () => {
-			updateWindowInfo({
-				...windowStatus,
-				status: {
-					...windowStatus.status,
-					isMinimized: false,
-				}
-			}, 'window-restore');
-		});
-
-		// 监听全屏状态变化
-		window.on('enter-full-screen', () => {
-			updateWindowInfo({
-				...windowStatus,
-				status: {
-					...windowStatus.status,
-					isFullScreen: true,
-				}
-			}, 'window-enter-full-screen');
-		});
-
-		window.on('leave-full-screen', () => {
-			updateWindowInfo({
-				...windowStatus,
-				status: {
-					...windowStatus.status,
-					isFullScreen: false,
-				}
-			}, 'window-leave-full-screen');
-		});
+		monutWindowExtension(mainWindow);
+		mountStore();
 	}
 
 	if(inDevelopment) {
@@ -234,6 +107,8 @@ app.whenReady().then(createWindow);
 //osX only
 app.on("window-all-closed", () => {
 	if (process.platform !== "darwin") {
+		tray?.destroy();
+		unmountStore();
 		app.quit();
 	}
 });
