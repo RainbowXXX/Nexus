@@ -1,6 +1,5 @@
 import type { localStorage } from "./type/index";
-import store from "../extensions/storeExtension";
-import assert from "node:assert";
+import storage from "../extensions/storeExtension";
 
 export class ApiService {
     #baseURL: string;
@@ -10,7 +9,7 @@ export class ApiService {
 
     constructor(baseURL: string) {
         this.#baseURL = baseURL;
-		store.get('User').then((res) => {
+		storage.get('User').then((res) => {
 			this.#Storage_Userstring = res
 			if (this.#Storage_Userstring) {
 				this.#Storage_User = JSON.parse(this.#Storage_Userstring)
@@ -23,7 +22,7 @@ export class ApiService {
 
     // 封装的 fetch 方法
     private async request<T>(endpoint: string, method: 'GET' | 'POST', body?: unknown): Promise<T> {
-		assert(this.#UserToken !== null)
+		this.#UserToken = this.#UserToken ?? '';
 
         const headers: HeadersInit = {
             'Content-Type': 'application/json',
@@ -43,15 +42,16 @@ export class ApiService {
         try {
             const response = await fetch(`https://${this.#baseURL}${endpoint}`, options);
             const responseJson = await response.json();
-            if (!response.ok || responseJson.data.status != 0) {
-                if (responseJson.data.status == 5) {
-					store.remove('User');
+			console.log(responseJson)
+            if (!response.ok || responseJson.status != 0) {
+                if (responseJson.status == 5) {
+					storage.remove('User');
                     // TODO 跳转到登录页面
                 } else {
                     throw new Error(`Error: ${response.status} - ${responseJson.data.message}`);
                 }
             }
-            return await response.json() as T;
+            return responseJson as T;
         } catch (error) {
             console.error('Fetch error:', error);
             throw error;

@@ -56,7 +56,7 @@ export default function ChatInfoProvider({ children }: { children: ReactNode }) 
 		},
 	};
 	const handleMsg = (msg: any) => {
-		let msg_json = msg as Message;
+		let msg_json = JSON.parse(msg) as Message;
 		setChatInfo({
 			...chatInfo,
 			friend_list: msg_json.data.data.aliveList.map((val):FriendInfo => {

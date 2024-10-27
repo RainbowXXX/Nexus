@@ -1,4 +1,5 @@
 import React, { createContext, ReactNode, useEffect, useState } from "react";
+import { storage } from "@/helpers/store_helpers";
 
 interface Setting {
 	serverAddress: string,
@@ -13,12 +14,11 @@ const defaultSettings: Setting = {
 export const SettingContext = createContext<[Setting, (_: Setting) => void]> ([defaultSettings, () => {}]);
 
 export default function SettingProvider({ children }: { children: ReactNode }) {
-	const store = window.storeExtensions.store;
 	const [setting, setSetting] = useState<Setting>(defaultSettings);
 
 	useEffect(() => {
 		let lastSetting: Setting;
-		store.get('setting').then((lastSettingStr) => {
+		storage.get('setting').then((lastSettingStr) => {
 			lastSetting = lastSettingStr? (JSON.parse(lastSettingStr) as Setting): defaultSettings;
 			console.log('Setting read:', lastSetting);
 			setSetting(lastSetting);
@@ -28,7 +28,7 @@ export default function SettingProvider({ children }: { children: ReactNode }) {
 	const updateSetting = (setting: Setting) => {
 		setSetting(setting);
 		console.log('Setting update:', setting);
-		store.set('setting', JSON.stringify(setting));
+		storage.set('setting', JSON.stringify(setting));
 	}
 
 	return (

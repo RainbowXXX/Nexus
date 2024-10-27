@@ -1,6 +1,5 @@
 import * as fs from "node:fs";
 import { BrowserWindow } from "electron";
-import Electron from "electron";
 
 type StoreItem = {
 	[key: string]: string;
@@ -9,7 +8,7 @@ type StoreItem = {
 const dataFile = 'data.json';
 let map: StoreItem = {};
 
-const store: StoreObject = {
+const storage: StoreObject = {
 	set(key: string, value: string): Promise<void> {
 		console.log('set', key, value);
 		map[key] = value;
@@ -36,4 +35,4 @@ export function unmountStore() {
 	fs.writeFileSync(dataFile, JSON.stringify(map));
 }
 
-export default store;
+export default storage;

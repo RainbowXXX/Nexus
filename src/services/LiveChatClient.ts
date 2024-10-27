@@ -1,8 +1,9 @@
 import WebSocket from "ws";
 import { ApiService } from "./request";
 import { ConnectEvent, parameter, response } from "./type";
+import storage from "@/extensions/storeExtension";
 
-const request = new ApiService('ServerUrl')
+let request: ApiService;
 
 export class LiveChatError extends Error {
 	constructor(message?: string) {
@@ -22,6 +23,7 @@ export default class LiveChatClient {
 
 	constructor(serverUrl: string) {
 		this.#serverUrl = serverUrl;
+		request = new ApiService(serverUrl);
 	}
 
 	/**
