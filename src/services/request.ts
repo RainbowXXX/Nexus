@@ -1,24 +1,30 @@
 import type { localStorage } from "./type/index";
 import store from "../extensions/storeExtension";
+import assert from "node:assert";
 
 export class ApiService {
     #baseURL: string;
-    #UserToken: string;
-    #Storage_User: localStorage.User | null;
-    #Storage_Userstring = store.get('User');
+    #UserToken: string | null = null;
+	#Storage_Userstring: string| null = null;
+    #Storage_User: localStorage.User | null = null;
 
     constructor(baseURL: string) {
         this.#baseURL = baseURL;
-        if (this.#Storage_Userstring) {
-            this.#Storage_User = JSON.parse(this.#Storage_Userstring)
-        } else {
-            this.#Storage_User = null
-        }
-        this.#UserToken = this.#Storage_User?.token ? this.#Storage_User.token : '';
+		store.get('User').then((res) => {
+			this.#Storage_Userstring = res
+			if (this.#Storage_Userstring) {
+				this.#Storage_User = JSON.parse(this.#Storage_Userstring)
+			} else {
+				this.#Storage_User = null
+			}
+			this.#UserToken = this.#Storage_User?.token ? this.#Storage_User.token : '';
+		})
     }
 
     // 封装的 fetch 方法
     private async request<T>(endpoint: string, method: 'GET' | 'POST', body?: unknown): Promise<T> {
+		assert(this.#UserToken !== null)
+
         const headers: HeadersInit = {
             'Content-Type': 'application/json',
             'Authorization': this.#UserToken,

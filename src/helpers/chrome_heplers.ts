@@ -1,4 +1,5 @@
-import { LoginInfo } from "@/services/LiveChatClient";
+import type { parameter } from "@/services/type";
+type LoginInfo = parameter.LoginInfo;
 
 export async function openDevTools() {
     await window.chromeTools.open_dev_tools();

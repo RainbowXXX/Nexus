@@ -1,10 +1,6 @@
 import * as fs from "node:fs";
-
-interface storeExtension {
-	set(key: string, value: string): void;
-	get(key: string): string | null;
-	remove(key: string): void;
-}
+import { BrowserWindow } from "electron";
+import Electron from "electron";
 
 type StoreItem = {
 	[key: string]: string;
@@ -13,28 +9,31 @@ type StoreItem = {
 const dataFile = 'data.json';
 let map: StoreItem = {};
 
-const store: storeExtension = {
-	set(key: string, value: string) {
+const store: StoreObject = {
+	set(key: string, value: string): Promise<void> {
+		console.log('set', key, value);
 		map[key] = value;
+		return Promise.resolve();
 	},
-	get(key: string): string | null {
-		return map[key];
+	get(key: string): Promise<string | null> {
+		console.log('get', key);
+		return Promise.resolve(map[key]);
 	},
 	remove(key: string) {
+		console.log('remove', key);
 		delete map[key];
+		return Promise.resolve();
 	},
 }
 
-export function mountStore() {
+export function mountStore(window: BrowserWindow) {
 	if(fs.existsSync(dataFile)) {
 		map = JSON.parse(fs.readFileSync(dataFile, 'utf-8'));
 	}
 }
 
 export function unmountStore() {
-	if(!fs.existsSync(dataFile)) {
-		fs.writeFileSync(dataFile, JSON.stringify(map));
-	}
+	fs.writeFileSync(dataFile, JSON.stringify(map));
 }
 
 export default store;
