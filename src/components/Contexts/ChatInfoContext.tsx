@@ -60,9 +60,7 @@ export default function ChatInfoProvider({ children }: { children: ReactNode }) 
 		setChatInfo({
 			...chatInfo,
 			friend_list: msg_json.data.data.aliveList.map((val):FriendInfo => {
-				return  {
-					id: val
-				}
+				return  { id: val }
 			})
 		})
 	}
