@@ -46,6 +46,9 @@ export default function VerticalSidebar() {
 
 	const chatInfo = useContext(ChatInfoContext);
 	const isLoggedIn = !((chatInfo.disconnected)??true);
+
+	console.log(chatInfo.disconnected, isLoggedIn)
+
 	return (
 		<div className={styles.sidebar}>
 			<Avatar className={styles.avatar} onClick={async () => {
@@ -55,27 +58,27 @@ export default function VerticalSidebar() {
 				<AvatarFallback style={{userSelect:'none'}}>U</AvatarFallback>
 			</Avatar>
 			<div className={styles.spacer}></div>
-{/*			<Button variant="ghost" size="icon" className={styles.settingsButton} aria-label="Settings">
-				<Settings className={styles.settingsIcon} />
-			</Button>*/}
+
 			{isLoggedIn ? (
 				<Button variant="ghost" size="icon" className={styles.settingsButton} onClick={() => closeClient()}>
 					<LogOut className={styles.settingsIcon} />
 				</Button>
 			) : (
-				<Dialog open={showLogin} onOpenChange={setShowLogin} >
-					<DialogTitle/>
-					<DialogTrigger asChild>
-						<Button variant="ghost" size="icon" className={styles.settingsButton} aria-label="Login">
-							<LogIn className={styles.settingsIcon} />
-						</Button>
-					</DialogTrigger>
-					<DialogContent className="p-0" style={{width: '80%', height: '75%'}} aria-describedby={undefined} >
-						<LoginArea/>
-					</DialogContent>
-				</Dialog>
-
+				<Button variant="ghost" size="icon" className={styles.settingsButton} onClick={() => setShowLogin(true) } aria-label="Login">
+					<LogIn className={styles.settingsIcon} />
+				</Button>
 			)}
+
+			<Dialog open={showLogin && !isLoggedIn} onOpenChange={setShowLogin} >
+				<DialogTitle/>
+				<DialogContent className="p-0" style={{width: '80%', height: '75%'}} aria-describedby={undefined} >
+					<LoginArea
+						loginCallback={(isOk) => {
+							setShowLogin(!isOk)
+						}}
+					/>
+				</DialogContent>
+			</Dialog>
 
 			<Dialog open={isSettingOpen} onOpenChange={setIsSettingOpen} >
 				<DialogTitle/>

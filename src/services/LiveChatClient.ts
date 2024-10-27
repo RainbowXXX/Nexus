@@ -54,7 +54,7 @@ export default class LiveChatClient {
 	 * 取当前用户的用户信息
 	 */
 	async GetMyInfo() {
-		let response = await request.get('/api/user/userinfo')
+		// let response = await request.get('/api/user/userinfo')
 
 	}
 

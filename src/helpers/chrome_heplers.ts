@@ -15,7 +15,7 @@ export async function fetchData(...args: string[]) {
 export async function createClient(wssUrl: string) {
 	return await window.chromeTools.wss('create', wssUrl);
 }
-export async function loginServer(loginInfo: LoginInfo) {
+export async function loginServer(loginInfo: LoginInfo): Promise<boolean> {
 	return await window.chromeTools.wss('login', JSON.stringify(loginInfo));
 }
 export async function closeClient(): Promise<void> {

@@ -1,11 +1,12 @@
 import * as fs from "node:fs";
 import { BrowserWindow } from "electron";
+import { DEFAULT_DATA_FILE } from "../constants/SharedConstants";
 
 type StoreItem = {
 	[key: string]: string;
 };
 
-const dataFile = 'data.json';
+const dataFile = DEFAULT_DATA_FILE;
 let map: StoreItem = {};
 
 const storage: StoreObject = {
@@ -25,7 +26,7 @@ const storage: StoreObject = {
 	},
 }
 
-export function mountStore(window: BrowserWindow) {
+export function mountStore(_: BrowserWindow) {
 	if(fs.existsSync(dataFile)) {
 		map = JSON.parse(fs.readFileSync(dataFile, 'utf-8'));
 	}

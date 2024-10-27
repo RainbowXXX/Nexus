@@ -31,8 +31,7 @@ export function addChromeEventListeners(mainWindow: BrowserWindow) {
 				break;
 			case 'login':
 				const loginInfo = JSON.parse(args[0]) as LoginInfo;
-				client?.loginAndConnect(loginInfo, handler);
-				break;
+				return client?.loginAndConnect(loginInfo, handler) ?? false;
 			case 'send':
 				break;
 			case 'close':

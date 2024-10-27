@@ -7,12 +7,11 @@ import type { parameter } from "@/services/type";
 
 type LoginInfo = parameter.LoginInfo;
 
-export default function LoginArea() {
+export default function LoginArea({ loginCallback }: { loginCallback: (_: boolean) => void }) {
 	const chatInfo = useContext(ChatInfoContext);
 
 	const [uname, setUname] = useState('');
 	const [passwd, setPasswd] = useState('');
-
 
 	const handleLogin = async () => {
 		let loginInfo: LoginInfo = {
@@ -20,7 +19,8 @@ export default function LoginArea() {
 			password: passwd,
 			application: 'Nexus',
 		}
-		chatInfo.login(loginInfo);
+		let loginRes = await chatInfo.login(loginInfo);
+		loginCallback(loginRes)
 	}
 
 	return (

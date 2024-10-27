@@ -2,19 +2,19 @@ import React, { ReactNode, useContext, useEffect, useState } from "react";
 import { SettingContext } from "@/components/Contexts/SettingsContext";
 import { closeClient, createClient, loginServer } from "@/helpers/chrome_heplers";
 import type { parameter } from "@/services/type";
-import { ChatInfo, ChatInfoContext, FriendInfo, Message } from "../ChatInfoContext";
+import { ChatInfo, ChatInfoContext, UserInfo, Message } from "../ChatInfoContext";
 
 type LoginInfo = parameter.LoginInfo;
 
 export default function ChatInfoProvider({ children }: { children: ReactNode }) {
 	const initialState:ChatInfo = {
-		friend_list: [],
+		friends_list: [],
 
 		established: false,
 		disconnected: true,
 
 		login(loginInfo: LoginInfo) {
-			loginServer(loginInfo)
+			return loginServer(loginInfo);
 		},
 		logout() {
 			closeClient()
@@ -24,13 +24,18 @@ export default function ChatInfoProvider({ children }: { children: ReactNode }) 
 		let msg_json = JSON.parse(msg) as Message;
 		setChatInfo({
 			...chatInfo,
-			friend_list: msg_json.data.data.aliveList.map((val):FriendInfo => {
-				return  { id: val }
+			established: true,
+			disconnected: false,
+			friends_list: msg_json.data.data.aliveList.map((val):UserInfo => {
+				return  {
+					id: val,
+					nickName: 'testUser',
+				}
 			})
 		})
 	}
 	const handler = (event_type: 'establish' | 'close' | 'terminate' | 'receive' | 'reset', msg: any) => {
-		console.log('handle',event_type)
+		console.log('handling',event_type)
 		switch (event_type) {
 			case 'establish':
 				setChatInfo({
@@ -54,7 +59,6 @@ export default function ChatInfoProvider({ children }: { children: ReactNode }) 
 				})
 				break;
 			case "receive":
-				// TODO(dev) 添加接收消息的逻辑
 				handleMsg(msg);
 				console.log('Receive msg...', msg);
 				break;
@@ -69,7 +73,7 @@ export default function ChatInfoProvider({ children }: { children: ReactNode }) 
 
 	useEffect(() => {
 		return window.chromeTools.ipc.on('wss', handler);
-	}, []);
+	}, [setChatInfo]);
 
 	useEffect(() => {
 		if(!settings[0].serverAddress) return;

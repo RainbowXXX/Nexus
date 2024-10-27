@@ -3,17 +3,18 @@ import type { parameter } from "@/services/type";
 
 type LoginInfo = parameter.LoginInfo;
 
-export interface FriendInfo {
+export interface UserInfo {
 	id: number,
-	name?: string,
+	nickName: string,
+	avatar?: any,
 }
- export interface ChatInfo {
-	friend_list: FriendInfo[],
+export interface ChatInfo {
+	friends_list: UserInfo[],
 
 	established: boolean;
 	disconnected: boolean;
 
-	login(loginInfo: LoginInfo): void;
+	login(loginInfo: LoginInfo): Promise<boolean>;
 	logout(): void;
 }
 export interface Message {
@@ -32,9 +33,9 @@ export interface Message {
 }
 
 export const ChatInfoContext = createContext<ChatInfo>({
-	friend_list: [],
+	friends_list: [],
 	established: false,
 	disconnected: false,
-	login(_: LoginInfo){},
+	login(_: LoginInfo){ return Promise.resolve(false); },
 	logout() {},
 });
