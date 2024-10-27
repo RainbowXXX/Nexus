@@ -14,7 +14,7 @@ export default function SettingArea() {
 		<div className="flex text-gray-300 bg-gray-900">
 			{/* Sidebar */}
 			<div className="w-48 bg-gray-800 p-4 flex flex-col gap-2">
-				<Button variant="ghost" className="justify-start mb-4">
+				<Button variant="ghost" className={`justify-start mb-4 ${styles.BackBottonHover}`}>
 					<ChevronLeft className="mr-2 h-4 w-4" />
 					返回
 				</Button>
