@@ -1,0 +1,9 @@
+.active{
+    background-color: rgba(16, 112, 112, 0.678);
+}
+.navBottonHover{
+    transition: all 0.2s ease-in-out;
+}
+.navBottonHover:hover{
+    box-shadow: 0 0 20px 5px rgba(26, 216, 216, 0.795);;
+}
