@@ -1,7 +1,6 @@
 import WebSocket from "ws";
 import { ApiService } from "./request";
 import { ConnectEvent, parameter, response } from "./type";
-import storage from "@/extensions/storeExtension";
 
 let request: ApiService;
 

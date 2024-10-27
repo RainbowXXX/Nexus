@@ -8,8 +8,9 @@ import {
 import assert from "node:assert";
 import WebSocket from "ws";
 import LiveChatClient from "../../../services/LiveChatClient";
-import { ConnectEvent, parameter } from "../../../services/type";
-import LoginInfo = parameter.LoginInfo;
+import type { ConnectEvent, parameter } from "../../../services/type";
+
+type LoginInfo = parameter.LoginInfo;
 
 let client: LiveChatClient | null = null;
 export function addChromeEventListeners(mainWindow: BrowserWindow) {

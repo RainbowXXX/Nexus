@@ -2,9 +2,9 @@ import React from "react";
 import DragWindowRegion from "@/components/DragWindowRegion";
 
 import styles from "@/styles/BaseLayout.module.css";
-import WindowStatusProvider from "@/components/Contexts/WindowStatusContext";
-import SettingProvider from "@/components/Contexts/SettingsContext";
-import ChatInfoProvider from "@/components/Contexts/ChatInfoContext";
+import WindowStatusProvider from "@/components/Contexts/ContextProviders/WindowStatusProvider";
+import SettingProvider from "@/components/Contexts/ContextProviders/SettingsProvider";
+import ChatInfoProvider from "@/components/Contexts/ContextProviders/ChatInfoProvider";
 
 export default function BaseLayout({ children }: { children: React.ReactNode }) {
     return (

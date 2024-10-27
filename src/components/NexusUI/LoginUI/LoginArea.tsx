@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChatInfoContext } from "@/components/Contexts/ChatInfoContext";
 import type { parameter } from "@/services/type";
+
 type LoginInfo = parameter.LoginInfo;
 
 export default function LoginArea() {

@@ -1,9 +1,5 @@
 import { ipcRenderer } from "electron";
-import {
-	STORE_GET_DATA_CHANNEL,
-	STORE_SET_DATA_CHANNEL,
-	STORE_REMOVE_DATA_CHANNEL,
-} from "./store-channels";
+import { STORE_GET_DATA_CHANNEL, STORE_REMOVE_DATA_CHANNEL, STORE_SET_DATA_CHANNEL } from "./store-channels";
 
 const storage: StoreObject = {
 	get(key: string): Promise<string | null> {
@@ -27,7 +23,7 @@ const storage: StoreObject = {
 }
 
 export function exposeStoreContext() {
-	const { contextBridge, ipcRenderer } = window.require("electron");
+	const { contextBridge } = window.require("electron");
 	contextBridge.exposeInMainWorld('storeExtensions', {
 		store: storage,
 	})

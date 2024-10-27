@@ -1,10 +1,8 @@
-import { BrowserWindow, ipcMain, Notification } from "electron";
-import {
-	STORE_GET_DATA_CHANNEL, STORE_REMOVE_DATA_CHANNEL, STORE_SET_DATA_CHANNEL,
-} from "./store-channels";
+import { BrowserWindow, ipcMain } from "electron";
+import { STORE_GET_DATA_CHANNEL, STORE_REMOVE_DATA_CHANNEL, STORE_SET_DATA_CHANNEL } from "./store-channels";
 import storage from "../../../extensions/storeExtension";
 
-export function addStoreEventListeners(mainWindow: BrowserWindow) {
+export function addStoreEventListeners(_: BrowserWindow) {
 	ipcMain.handle(STORE_GET_DATA_CHANNEL, async (_, key: string) => {
 		console.log('get', key)
 		return await storage.get(key);
