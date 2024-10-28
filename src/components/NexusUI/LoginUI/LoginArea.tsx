@@ -11,13 +11,13 @@ type LoginInfo = parameter.LoginInfo;
 export default function LoginArea({ loginCallback }: { loginCallback: (_: boolean) => void }) {
 	const chatInfo = useContext(ChatInfoContext);
 
-	const [uname, setUname] = useState('');
-	const [passwd, setPasswd] = useState('');
+	const [username, setUsername] = useState('');
+	const [password, setPassword] = useState('');
 
 	const handleLogin = async () => {
 		let loginInfo: LoginInfo = {
-			account: uname,
-			password: passwd,
+			account: username,
+			password: password,
 			application: 'Nexus',
 		}
 		let loginRes = await chatInfo.login(loginInfo);
@@ -25,28 +25,30 @@ export default function LoginArea({ loginCallback }: { loginCallback: (_: boolea
 	}
 
 	return (
-		<Card className="w-full bg-white bg-opacity-20 backdrop-filter backdrop-blur-lg">
+		<Card className={styles.card}>
 			<CardHeader>
-				<CardTitle className="text-center text-white">登录</CardTitle>
+				<CardTitle className={styles.title}>登录</CardTitle>
 			</CardHeader>
-			<CardContent className={styles.CardContent}>
-				<div className="space-y-2">
+			<CardContent className={styles.cardContent}>
+				<div>
 					<Input
 						type="text"
 						placeholder="账号"
-						className="bg-white bg-opacity-20 text-white placeholder-gray-200"
-						onChange={(e) => setUname(e.target.value)}
+						className={styles.input}
+						onChange={(e) => setUsername(e.target.value)}
+						aria-label="账号"
 					/>
 				</div>
-				<div className="space-y-2">
+				<div>
 					<Input
 						type="password"
 						placeholder="密码"
-						className="bg-white bg-opacity-20 text-white placeholder-gray-200"
-						onChange={(e) => setPasswd(e.target.value)}
+						className={styles.input}
+						onChange={(e) => setPassword(e.target.value)}
+						aria-label="密码"
 					/>
 				</div>
-				<Button className="w-full bg-green-700 text-white hover:bg-green-800" onClick={() => {handleLogin()}}>
+				<Button className={styles.button} onClick={handleLogin}>
 					登录
 				</Button>
 			</CardContent>
