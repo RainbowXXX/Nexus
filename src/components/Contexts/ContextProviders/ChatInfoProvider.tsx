@@ -14,9 +14,11 @@ export default function ChatInfoProvider({ children }: { children: ReactNode }) 
 		disconnected: true,
 
 		login(loginInfo: LoginInfo) {
+			console.log('Logging ...')
 			return loginServer(loginInfo);
 		},
 		logout() {
+			console.log('Logout ...')
 			closeClient()
 		},
 	};

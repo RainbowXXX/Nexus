@@ -4,7 +4,6 @@ import { STORE_GET_DATA_CHANNEL, STORE_REMOVE_DATA_CHANNEL, STORE_SET_DATA_CHANN
 const storage: StoreObject = {
 	get(key: string): Promise<string | null> {
 		return new Promise( async (resolve, _) => {
-			console.log('test1')
 			resolve(await ipcRenderer.invoke(STORE_GET_DATA_CHANNEL, key))
 		})
 	},
