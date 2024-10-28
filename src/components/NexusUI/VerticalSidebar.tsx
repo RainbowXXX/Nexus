@@ -47,8 +47,6 @@ export default function VerticalSidebar() {
 	const chatInfo = useContext(ChatInfoContext);
 	const isLoggedIn = !((chatInfo.disconnected)??true);
 
-	console.log(chatInfo.disconnected, isLoggedIn)
-
 	return (
 		<div className={styles.sidebar}>
 			<Avatar className={styles.avatar} onClick={async () => {
@@ -88,7 +86,7 @@ export default function VerticalSidebar() {
 					</Button>
 				</DialogTrigger>
 				<MyDialogContent className="p-0" style={{width: '80%', height: '75%'}} aria-describedby={undefined} >
-					<SettingArea/>
+					<SettingArea setSettingAreaOpen={setIsSettingOpen}/>
 				</MyDialogContent>
 			</Dialog>
 		</div>

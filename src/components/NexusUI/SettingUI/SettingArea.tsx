@@ -6,7 +6,7 @@ import { SettingContext } from "@/components/Contexts/SettingsContext";
 
 import styles from "@/styles/NexusUI/Setting.module.css";
 
-export default function SettingArea() {
+export default function SettingArea({setSettingAreaOpen}: { setSettingAreaOpen: (_: boolean) => void }) {
 	const settings = useContext(SettingContext);
 	const [serverUrl, setServerUrl] = useState(settings[0].serverAddress);
 	const [settingItem, setSettingItem] = useState<string|null>('通用');
@@ -14,7 +14,14 @@ export default function SettingArea() {
 		<div className="flex text-gray-300 bg-gray-900">
 			{/* Sidebar */}
 			<div className="w-48 bg-gray-800 p-4 flex flex-col gap-2">
-				<Button variant="ghost" className={`justify-start mb-4 ${styles.BackBottonHover}`}>
+				<Button
+					variant="ghost"
+					className={`justify-start mb-4 ${styles.BackBottonHover}`}
+					onClick={() => {
+						setSettingAreaOpen(false)
+						console.log('放弃修改设置项')
+					}}
+				>
 					<ChevronLeft className="mr-2 h-4 w-4" />
 					返回
 				</Button>
@@ -30,19 +37,11 @@ export default function SettingArea() {
 					<>
 						<div className='server-ip' style={{ display: "flex", alignItems: "center" }}>
 							<span style={{ marginRight: '10px' }}>服务器地址: </span>
-							<Input placeholder='服务器地址' style={{ flex: 1 }} value={serverUrl ?? ''}
-								   onChange={(e) => {
-									   setServerUrl(e.target.value)
-								   }} onBlur={(event) => {
-								let newVal = event.target.value
-								const [oldVal, setter] = settings;
-								if (newVal !== oldVal.serverAddress) {
-									setter({
-										...oldVal,
-										serverAddress: newVal,
-									})
-								}
-							}} />
+							<Input placeholder='服务器地址'
+								   style={{ flex: 1 }}
+								   value={serverUrl ?? ''}
+								   onChange={(e) => setServerUrl(e.target.value)}
+							/>
 						</div>
 					</>
 				}
@@ -52,7 +51,17 @@ export default function SettingArea() {
 				<Button
 					className="px-6 py-3 text-lg font-medium rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200"
 					onClick={() => {
-						console.log("确定按钮被点击")
+						console.log("修改设置中...")
+						let newVal = serverUrl
+						const [oldVal, setter] = settings;
+						if (newVal !== oldVal.serverAddress) {
+							setter({
+								...oldVal,
+								serverAddress: newVal,
+							})
+						}
+						setSettingAreaOpen(false);
+						console.log("修改设置完成")
 					}}
 				>
 					确定
