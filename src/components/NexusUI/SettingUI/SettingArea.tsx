@@ -1,81 +1,47 @@
-import React, { useContext, useState } from "react";
+import React, { useContext } from "react";
 import { ChevronLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { SettingContext } from "@/components/Contexts/SettingsContext";
+import { Setting, SettingContext } from "@/components/Contexts/SettingsContext";
 
-import styles from "@/styles/NexusUI/Setting.module.css";
+import { SettingPanel, useSettings} from "@/components/NexusUI/components/SettingPanel";
 
-export default function SettingArea({setSettingAreaOpen}: { setSettingAreaOpen: (_: boolean) => void }) {
-	const settings = useContext(SettingContext);
-	const [serverUrl, setServerUrl] = useState(settings[0].serverAddress);
-	const [settingItem, setSettingItem] = useState<string|null>('通用');
+export default function NewSettingArea({setSettingAreaOpen}: { setSettingAreaOpen: (_: boolean) => void }) {
+	const [val, setter] = useContext(SettingContext);
+	const settings = useSettings(val);
+
+	const handleCancel = () => {
+		setSettingAreaOpen(false);
+		console.log('放弃修改设置项');
+	}
+
+	const handleSave = () => {
+		console.log("修改设置中...");
+		setter(settings.value as Setting)
+		setSettingAreaOpen(false);
+		console.log("修改设置完成");
+	}
+
 	return (
-		<div className={styles.container}>
-			{/* Sidebar */}
-			<div className={styles.sidebar}>
-				<Button
-					variant="ghost"
-					className={`justify-start mb-4 ${styles.backButtonHover}`}
-					onClick={() => {
-						setSettingAreaOpen(false);
-						console.log('放弃修改设置项');
-					}}
+		<SettingPanel.Root settingHook={settings}>
+			<SettingPanel.SideBar>
+				<SettingPanel.BackTrigger
+					onClick={handleCancel}
 				>
 					<ChevronLeft className="mr-2 h-4 w-4" />
 					返回
-				</Button>
-				<Button
-					variant="ghost"
-					className={`justify-start ${styles.navButtonHover} ${settingItem === '通用' ? styles.active : ''}`}
-					onClick={() => setSettingItem('通用')}
-				>
-					通用
-				</Button>
-				<Button
-					variant="ghost"
-					className={`justify-start ${styles.navButtonHover} ${settingItem === '外观' ? styles.active : ''}`}
-					onClick={() => setSettingItem('外观')}
-				>
-					外观
-				</Button>
-			</div>
-
-			{/* Main content */}
-			<div className={styles.mainContent}>
-				<h1 className={styles.title}>{settingItem ?? '设置'}</h1>
-				{settingItem === '通用' && (
-					<div className={styles.serverIp}>
-						<span className={styles.serverIpLabel}>服务器地址: </span>
-						<Input
-							placeholder='服务器地址'
-							style={{ flex: 1 }}
-							value={serverUrl ?? ''}
-							onChange={(e) => setServerUrl(e.target.value)}
-						/>
-					</div>
-				)}
-			</div>
-
-			<div className={styles.confirmButton}>
-				<Button
-					onClick={() => {
-						console.log("修改设置中...");
-						let newVal = serverUrl;
-						const [oldVal, setter] = settings;
-						if (newVal !== oldVal.serverAddress) {
-							setter({
-								...oldVal,
-								serverAddress: newVal,
-							});
-						}
-						setSettingAreaOpen(false);
-						console.log("修改设置完成");
-					}}
-				>
-					确定
-				</Button>
-			</div>
-		</div>
+				</SettingPanel.BackTrigger>
+				<SettingPanel.Trigger value='General' >通用</SettingPanel.Trigger>
+				<SettingPanel.Trigger value='Appearance' >外观</SettingPanel.Trigger>
+			</SettingPanel.SideBar>
+			<SettingPanel.Content value='General' title={'通用'} asDefault>
+				<SettingPanel.Item hint={'服务器地址: '} name={'serverAddress'} type={'text'} />
+			</SettingPanel.Content>
+			<SettingPanel.Content value='Appearance' title={'外观'}>
+			</SettingPanel.Content>
+			<SettingPanel.ConfirmTrigger
+				onClick={handleSave}
+			>
+				确认
+			</SettingPanel.ConfirmTrigger>
+		</SettingPanel.Root>
 	)
 }
