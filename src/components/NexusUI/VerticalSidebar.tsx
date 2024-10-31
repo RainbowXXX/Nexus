@@ -15,7 +15,7 @@ import {
 import LoginArea from "@/components/NexusUI/LoginUI/LoginArea";
 import { ChatInfoContext } from "@/components/Contexts/ChatInfoContext";
 import { toggleTheme } from "@/helpers/theme_helpers";
-import { closeClient } from "@/helpers/chrome_heplers";
+import { closeClient, openDevTools } from "@/helpers/chrome_heplers";
 import { DialogContentWithoutClose } from "@/components/NexusUI/components/DialogContentWithoutClose";
 
 export default function VerticalSidebar() {
@@ -27,9 +27,15 @@ export default function VerticalSidebar() {
 
 	return (
 		<div className={styles.sidebar}>
-			<Avatar className={styles.avatar} onClick={async () => {
-				toggleTheme();
-			}}>
+			<Avatar
+				className={styles.avatar}
+				onClick={async () => {
+					toggleTheme();
+				}}
+				onContextMenu={async () => {
+					openDevTools();
+				}}
+			>
 				<AvatarImage src="/placeholder.svg?height=40&width=40" alt="User" />
 				<AvatarFallback style={{userSelect:'none'}}>U</AvatarFallback>
 			</Avatar>

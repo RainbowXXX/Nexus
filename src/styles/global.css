@@ -133,10 +133,12 @@
 @layer base {
     * {
         @apply m-0 border-border p-0 font-sans;
+		transition: background-color 0.5s;
     }
     body {
         @apply overflow-hidden bg-background text-foreground;
-        height: 100vh
+        height: 100vh;
+		transition: background-color 0.5s, color 0.3s;
     }
     #app {
 		height: 100%
