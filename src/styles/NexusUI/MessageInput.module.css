@@ -1,5 +1,5 @@
 .container {
-	background-color: hsl(var(--secondary));
+	background-color: hsl(var(--chatcontent-background));
 	padding: 1rem;
 	border-top: 1px solid #e5e7eb;
 	display: flex;

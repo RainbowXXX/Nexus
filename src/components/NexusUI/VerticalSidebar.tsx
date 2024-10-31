@@ -9,36 +9,14 @@ import SettingArea from "@/components/NexusUI/SettingUI/SettingArea";
 import {
 	Dialog,
 	DialogContent,
-	DialogOverlay,
-	DialogPortal,
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { cn } from "@/lib/utils";
 import LoginArea from "@/components/NexusUI/LoginUI/LoginArea";
 import { ChatInfoContext } from "@/components/Contexts/ChatInfoContext";
 import { toggleTheme } from "@/helpers/theme_helpers";
 import { closeClient } from "@/helpers/chrome_heplers";
-
-const MyDialogContent = React.forwardRef<
-	React.ElementRef<typeof DialogPrimitive.Content>,
-	React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-	<DialogPortal>
-		<DialogOverlay />
-		<DialogPrimitive.Content
-			ref={ref}
-			className={cn(
-				"fixed left-[50%] top-[50%] z-50 grid w-full translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
-				className
-			)}
-			{...props}
-		>
-			{children}
-		</DialogPrimitive.Content>
-	</DialogPortal>
-))
+import { DialogContentWithoutClose } from "@/components/NexusUI/components/DialogContentWithoutClose";
 
 export default function VerticalSidebar() {
 	const [showLogin, setShowLogin] = useState(false);
@@ -85,9 +63,9 @@ export default function VerticalSidebar() {
 						<Settings className={styles.settingsIcon} />
 					</Button>
 				</DialogTrigger>
-				<MyDialogContent className="p-0" style={{width: '80%', height: '75%'}} aria-describedby={undefined} >
+				<DialogContentWithoutClose className="p-0" style={{width: '80%', height: '75%'}} aria-describedby={undefined} >
 					<SettingArea setSettingAreaOpen={setIsSettingOpen}/>
-				</MyDialogContent>
+				</DialogContentWithoutClose>
 			</Dialog>
 		</div>
 	);

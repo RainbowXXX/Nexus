@@ -27,12 +27,6 @@ export default function ChatList({ selectedChat, setSelectedChat }: ChatListProp
 		}
 	})
 
-/*	const chats = [
-		{ id: 1, name: 'test', avatar: '/placeholder.svg?height=40&width=40', lastMessage: 'test', time: '19:25', unread: 7 },
-		{ id: 2, name: 'test1', avatar: '/placeholder.svg?height=40&width=40', lastMessage: 'test', time: '19:01', unread: 0 },
-		{ id: 3, name: 'test2', avatar: '/placeholder.svg?height=40&width=40', lastMessage: 'test', time: '18:54', unread: 0 },
-	]*/
-
 	return (
 		<div className={styles.container}>
 			<div className={styles.searchContainer}>
