@@ -1,17 +1,20 @@
 import React, { ReactNode, useContext, useEffect, useState } from "react";
 import { SettingContext } from "@/components/Contexts/SettingsContext";
 import { closeClient, createClient, loginServer } from "@/helpers/chrome_heplers";
-import type { parameter } from "@/services/type";
-import { ChatInfo, ChatInfoContext, UserInfo, Message } from "../ChatInfoContext";
+import { client, parameter, response } from "@/services/type";
+import { ChatInfo, ChatInfoContext } from "../ChatInfoContext";
 
+type UserInfo = response.UserInfo;
 type LoginInfo = parameter.LoginInfo;
+type ClientEventData = client.ClientEventData;
 
 export default function ChatInfoProvider({ children }: { children: ReactNode }) {
 	const initialState:ChatInfo = {
 		friends_list: [],
+		alive_user_ids: [],
+		cur_user_info: null,
 
-		established: false,
-		disconnected: true,
+		connected: false,
 
 		login(loginInfo: LoginInfo) {
 			console.log('Logging ...')
@@ -22,47 +25,35 @@ export default function ChatInfoProvider({ children }: { children: ReactNode }) 
 			closeClient()
 		},
 	};
-	const handleMsg = (msg: any) => {
-		let msg_json = JSON.parse(msg) as Message;
-		setChatInfo({
-			...chatInfo,
-			established: true,
-			disconnected: false,
-			friends_list: msg_json.data.data.aliveList.map((val):UserInfo => {
-				return  {
-					id: val,
-					nickName: 'testUser',
-				}
-			})
-		})
-	}
-	const handler = (event_type: 'establish' | 'close' | 'terminate' | 'receive' | 'reset', msg: any) => {
+	const handler = (event_type: 'login' | 'close' | 'update', data: ClientEventData) => {
 		console.log('handling',event_type)
 		switch (event_type) {
-			case 'establish':
-				setChatInfo({
-					...chatInfo,
-					established: true,
-					disconnected: false,
-				})
-				break;
-			case "terminate":
-				setChatInfo({
-					...chatInfo,
-					established: false,
-				})
+			case "login":
+				if(data.hasValue()) {
+					let curUserData = data.getData();
+					setChatInfo({
+						...chatInfo,
+						connected: true,
+						cur_user_info: curUserData.curUserInfo,
+						friends_list: [curUserData.curUserInfo]
+					})
+				}
+				// 否则通知登录不成功
 				break;
 			case "close":
-			case "reset":
+				// TODO(dev) 添加意外中断的处理
+				setChatInfo(initialState);
+				break;
+			case "update":
+				let update_data = data.getData();
+				console.debug({
+					...chatInfo,
+					...update_data,
+				})
 				setChatInfo({
 					...chatInfo,
-					established: false,
-					disconnected: true,
+					...update_data,
 				})
-				break;
-			case "receive":
-				handleMsg(msg);
-				console.log('Receive msg...', msg);
 				break;
 			default:
 				break;
@@ -74,7 +65,7 @@ export default function ChatInfoProvider({ children }: { children: ReactNode }) 
 	const settings = useContext(SettingContext);
 
 	useEffect(() => {
-		return window.chromeTools.ipc.on('wss', handler);
+		return window.chromeTools.ipc.on('client', (l, r) => handler(l, new client.ClientEventData<any>(JSON.parse(r))));
 	}, [setChatInfo]);
 
 	useEffect(() => {

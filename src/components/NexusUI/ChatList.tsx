@@ -15,11 +15,11 @@ interface ChatListProps {
 
 export default function ChatList({ selectedChat, setSelectedChat }: ChatListProps) {
 	const chatInfos = useContext(ChatInfoContext);
-
 	const chats = chatInfos.friends_list.map((value) => {
 		return {
-			id: value.id,
-			name: value.nickName,
+			// TODO(dev) 添加id
+			id: 1,
+			name: value.name,
 			avatar: value.avatar??'/placeholder.svg?height=40&width=40',
 			lastMessage: 'test',
 			time: '19:25',

@@ -120,3 +120,7 @@ app.on("activate", () => {
 	}
 });
 //osX only ends
+
+export {
+	mainWindow
+}

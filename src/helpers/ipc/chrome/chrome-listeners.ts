@@ -8,7 +8,7 @@ import {
 import assert from "node:assert";
 import WebSocket from "ws";
 import LiveChatClient from "../../../services/LiveChatClient";
-import type { ConnectEvent, parameter } from "../../../services/type";
+import type { parameter } from "../../../services/type";
 
 type LoginInfo = parameter.LoginInfo;
 
@@ -20,18 +20,13 @@ export function addChromeEventListeners(mainWindow: BrowserWindow) {
 		return await (await fetch(url, JSON.parse(option))).json();
 	});
 	ipcMain.handle(CHROME_WSS_CHANNEL, async (event, action: string, ...args: string[]): Promise<any> => {
-		const handler = (client: LiveChatClient, event: ConnectEvent) => {
-			console.log('Forwarding', event.event_type)
-			mainWindow.webContents.send('wss', event.event_type, JSON.stringify(event.obj));
-		}
-
 		switch (action) {
 			case 'create':
 				client = new LiveChatClient(args[0]);
 				break;
 			case 'login':
 				const loginInfo = JSON.parse(args[0]) as LoginInfo;
-				return client?.loginAndConnect(loginInfo, handler) ?? false;
+				return client?.loginAndConnect(loginInfo) ?? false;
 			case 'send':
 				break;
 			case 'close':

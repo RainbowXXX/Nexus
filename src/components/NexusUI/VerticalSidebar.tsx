@@ -23,7 +23,7 @@ export default function VerticalSidebar() {
 	const [isSettingOpen, setIsSettingOpen] = useState(false);
 
 	const chatInfo = useContext(ChatInfoContext);
-	const isLoggedIn = !((chatInfo.disconnected)??true);
+	const isLoggedIn = chatInfo.connected;
 
 	return (
 		<div className={styles.sidebar}>

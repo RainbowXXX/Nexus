@@ -20,6 +20,11 @@ export class ApiService {
 		})
     }
 
+	updateToken(token: string) {
+		this.#UserToken = token;
+		storage.set('User', JSON.stringify({token: token}));
+	}
+
     // 封装的 fetch 方法
     private async request<T>(endpoint: string, method: 'GET' | 'POST', body?: unknown): Promise<T> {
 		this.#UserToken = this.#UserToken ?? '';

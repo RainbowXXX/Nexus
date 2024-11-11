@@ -1,18 +1,15 @@
 import { createContext } from "react";
-import type { parameter } from "@/services/type";
+import { parameter, response } from "@/services/type";
 
+type UserInfo = response.UserInfo;
 type LoginInfo = parameter.LoginInfo;
 
-export interface UserInfo {
-	id: number,
-	nickName: string,
-	avatar?: any,
-}
 export interface ChatInfo {
 	friends_list: UserInfo[],
+	alive_user_ids: number[];
+	cur_user_info: UserInfo| null,
 
-	established: boolean;
-	disconnected: boolean;
+	connected: boolean;
 
 	login(loginInfo: LoginInfo): Promise<boolean>;
 	logout(): void;
@@ -34,8 +31,9 @@ export interface Message {
 
 export const ChatInfoContext = createContext<ChatInfo>({
 	friends_list: [],
-	established: false,
-	disconnected: false,
+	cur_user_info: null,
+	alive_user_ids: [],
+	connected: false,
 	login(_: LoginInfo){ return Promise.resolve(false); },
 	logout() {},
 });
