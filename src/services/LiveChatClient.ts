@@ -51,9 +51,9 @@ export default class LiveChatClient {
 
 		switch (event_type) {
 			case "login":
-				let login_data = event_data as ClientEventData<{'token': string}>;
+				let login_data = event_data as ClientEventData<{ 'token': string }>;
 				// 登陆失败时通知前端
-				if(! login_data.hasValue()) {
+				if (!login_data.hasValue()) {
 					let error = login_data.getError();
 					forwardToFront('login', ClientEventData.Error('Failed to login: ' + error));
 					console.error('Failed to login: ' + error);
@@ -75,7 +75,7 @@ export default class LiveChatClient {
 				break;
 			case 'establish':
 				// 连接失败时通知前端
-				if(! event_data.hasValue()) {
+				if (!event_data.hasValue()) {
 					let error = event_data.getError();
 					forwardToFront('login', ClientEventData.Error('Failed to connect to wss server: ' + error));
 					console.error('Failed to connect to wss server:' + error);
@@ -84,7 +84,7 @@ export default class LiveChatClient {
 
 				// 登录成功通知前端
 				this.#curUserInfo = await this.getCurrentUserInfo();
-				forwardToFront('login', ClientEventData.Some({'curUserInfo': this.#curUserInfo}));
+				forwardToFront('login', ClientEventData.Some({ 'curUserInfo': this.#curUserInfo }));
 				break;
 			case 'close':
 				// wss断开后通知前端
@@ -92,7 +92,7 @@ export default class LiveChatClient {
 				break;
 			case "terminate":
 				// wss异常断开后通知前端
-				let terminate_data = event_data as ClientEventData<{'message': string}>;
+				let terminate_data = event_data as ClientEventData<{ 'message': string }>;
 				forwardToFront('close', ClientEventData.Error(terminate_data.getData().message));
 				break;
 			case "receive":
@@ -104,12 +104,12 @@ export default class LiveChatClient {
 						let alive_data = response_data as InitialMessage;
 						this.#aliveUserIdList = alive_data.data.aliveList;
 						console.debug('Update alive user list: ', this.#aliveUserIdList);
-						forwardToFront('update', ClientEventData.Some({'alive_user_ids': this.#aliveUserIdList}));
+						forwardToFront('update', ClientEventData.Some({ 'alive_user_ids': this.#aliveUserIdList }));
 						break;
 					case "MessageDistribution":
 						let arrive_data = response_data as ArriveMessage;
 						console.debug('Message arrived: ', arrive_data.data, arrive_data.exchange);
-						forwardToFront('arrive', ClientEventData.Some({'message': arrive_data.data, exchange: arrive_data.exchange}));
+						forwardToFront('arrive', ClientEventData.Some({ 'message': arrive_data.data, exchange: arrive_data.exchange }));
 						break;
 					default:
 						break;
@@ -138,7 +138,7 @@ export default class LiveChatClient {
 	 * @param loginInfo 登录信息
 	 */
 	async login(loginInfo: parameter.LoginInfo) {
-		let response = await request.post('/api/application/login',loginInfo)
+		let response = await request.post('/api/application/login', loginInfo)
 
 		let login_response = await response as response.LoginResponse;
 		console.log(login_response)
@@ -151,11 +151,11 @@ export default class LiveChatClient {
 		}
 
 		// assert(login_response.token !== null && login_response.token !== undefined);
-		if(login_response.token === null) {
+		if (login_response.token === null) {
 			this.handleServerEvent('login', ClientEventData.Error('Invalid token received from server'));
 			return false;
 		}
-		this.handleServerEvent('login', ClientEventData.Some({'token' : login_response.token}));
+		this.handleServerEvent('login', ClientEventData.Some({ 'token': login_response.token }));
 		return true;
 	}
 
@@ -183,7 +183,7 @@ export default class LiveChatClient {
 
 		socket.onerror = (event) => {
 			console.debug('WebSocket error.');
-			this.handleServerEvent('terminate', ClientEventData.Some({message: event.message}) );
+			this.handleServerEvent('terminate', ClientEventData.Some({ message: event.message }));
 			socket.close();
 			this.#webSocket = null;
 		}
@@ -251,32 +251,33 @@ export default class LiveChatClient {
 	 * @param userId 好友列表
 	 */
 	async getUserInfo(userId: number | number[] | null) {
-		if(userId === null) return [];
+		if (userId === null) return [];
 
-		if(typeof userId === 'number') userId = [userId];
+		if (typeof userId === 'number') userId = [userId];
 		const queryBody = {
 			"ids": userId
 		}
 
-		let res = await request.post('/api/application/getusersinfo',queryBody) as response.UserInfoResponse
+		let res = await request.post('/api/application/getusersinfo', queryBody) as response.UserInfoResponse
 		return res.data as response.UserInfo[]
 	}
 
-/*	async initClient(loginInfo: parameter.LoginInfo) {
-		let res = await this.loginAndConnect(loginInfo);
-		if(! res) {
-			return false;
-		}
-
-		let curUserInfo = await this.getCurrentUserInfo();
-		this.handleClientEvent('update_user', ClientEventData.Some(curUserInfo));
-
-		let userInfos = await this.getUserInfo(this.#friendIds);
-		this.handleClientEvent('update_user', ClientEventData.Some(userInfos));
-
-	}*/
+	/*	async initClient(loginInfo: parameter.LoginInfo) {
+			let res = await this.loginAndConnect(loginInfo);
+			if(! res) {
+				return false;
+			}
+	
+			let curUserInfo = await this.getCurrentUserInfo();
+			this.handleClientEvent('update_user', ClientEventData.Some(curUserInfo));
+	
+			let userInfos = await this.getUserInfo(this.#friendIds);
+			this.handleClientEvent('update_user', ClientEventData.Some(userInfos));
+	
+		}*/
 
 	/**
+	 * @deprecated 该函数可能在未来版本中被修改或替代。
 	 * 生成秘钥对
 	 */
 	async CreateKeyPair() {
@@ -286,10 +287,27 @@ export default class LiveChatClient {
 		const publicKeyBase64 = naclUtil.encodeBase64(publicKey);
 		const secretKeyBase64 = naclUtil.encodeBase64(secretKey);
 		const publicKeyBase64Hash = SHA256(publicKeyBase64).toString();
+		const messageUint8 = naclUtil.decodeUTF8(publicKeyBase64Hash + publicKeyBase64);
+		const signature = nacl.sign.detached(messageUint8, secretKey);
+		const signatureBase64 =  naclUtil.encodeBase64(signature);
 		// 输出密钥对
 		console.log("Public Key (Base64):", publicKeyBase64);
 		console.log("Secret Key (Base64):", secretKeyBase64);
-		this.#webSocket?.send
-		this.handleServerEvent('CreatKeyPair', ClientEventData.Some({'clientSecretKey' : secretKeyBase64, 'publicKeyVersion':publicKeyBase64Hash}));
+		console.log("Secret Key Version:", publicKeyBase64Hash);
+		console.log("Sign Message:", publicKeyBase64Hash + publicKeyBase64);
+		console.log("Sign (Base64):", signatureBase64);
+		const param = {
+			application: "Nexus",
+			type: "user",
+			timestamp: Date.now(),
+			data: {
+				type: "RefreshPublickey",
+				publickeyversion: publicKeyBase64Hash,
+				newpublickey: publicKeyBase64,
+				sign: signatureBase64
+			}
+		}
+		this.#webSocket?.send(JSON.stringify(param));
+		this.handleServerEvent('CreatKeyPair', ClientEventData.Some({ 'clientSecretKey': secretKeyBase64, 'publicKeyVersion': publicKeyBase64Hash }));
 	}
 }
