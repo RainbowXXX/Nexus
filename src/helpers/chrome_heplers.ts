@@ -1,6 +1,7 @@
-import type { parameter } from "@/services/type";
+import { parameter } from "@/services/type";
 
 type LoginInfo = parameter.LoginInfo;
+type MessageParameter = parameter.MessageParameter;
 
 export async function openDevTools() {
     await window.chromeTools.open_dev_tools();
@@ -20,4 +21,7 @@ export async function loginServer(loginInfo: LoginInfo): Promise<boolean> {
 }
 export async function closeClient(): Promise<void> {
 	await window.chromeTools.wss('close');
+}
+export async function sendMessage(message: MessageParameter, to: number) {
+	return await window.chromeTools.wss('send', JSON.stringify({message: message, to: to}));
 }

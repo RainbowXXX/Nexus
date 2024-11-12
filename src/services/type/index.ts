@@ -11,11 +11,39 @@ export namespace localStorage {
 }
 
 export namespace parameter {
+	export interface MessageParameter {
+		"messagetype": "text",
+		"message": string,
+		"timestamp": number
+	}
+	export interface SendMessageParameter {
+		// 保留字段
+		"publickeyversion": "None",
+
+		"type": "MessageSend",
+		"exchange": {
+			"to": number
+		},
+		"data": MessageParameter,
+		"sign": string,
+	}
+
     export interface LoginInfo {
         account: string,
         password: string,
         application: 'Nexus',
     }
+
+	interface WSSBaseParameter {
+		"application": 'Nexus',
+		"type": "user",
+		"timestamp": number,
+		"data": any,
+	}
+
+	export interface WSSParameter extends WSSBaseParameter {
+		"data": SendMessageParameter| string,
+	}
 }
 
 export namespace response {
@@ -26,6 +54,21 @@ export namespace response {
 			"aliveList": number[],
 		}
 	}
+	export interface ArriveMessage {
+		"type": "MessageDistribution",
+		"publickeyversion": "None",
+		"exchange": {
+			"from": number,
+			"to": number
+		},
+		"data": {
+			"messagetype": "text",
+			"message": string,
+			"timestamp": number
+		},
+		"sign": string
+	}
+
 	export interface UserInfo {
 		"name": string,
 		"phone": string,
@@ -52,20 +95,20 @@ export namespace response {
 	}
 
 	export interface WSSResponse extends WSSBaseResponse {
-		"data": InitialMessage,
+		"data": InitialMessage| ArriveMessage,
 	}
 }
 
-export namespace client {
-	export type ClientEventType = 'login' | 'logout' | 'establish' | 'close' | 'terminate' | 'receive';
-	export class ClientEventData<T = any> {
+export namespace serverEvent {
+	export type ServerEventType = 'login' | 'logout' | 'establish' | 'close' | 'terminate' | 'receive';
+	export class ServerEventData<T = any> {
 		constructor(data: any = undefined) {
 			if(data === undefined) return;
-			if(data.error) return ClientEventData.Error(data.error);
-			return ClientEventData.Some(data.data);
+			if(data.error) return ServerEventData.Error(data.error);
+			return ServerEventData.Some(data.data);
 		}
 
-		private static DataSome = class<T> extends ClientEventData<T> {
+		private static DataSome = class<T> extends ServerEventData<T> {
 			data: T| undefined;
 
 			constructor(data: T| undefined) {
@@ -74,7 +117,7 @@ export namespace client {
 			}
 		};
 
-		private static DataError = class<T> extends ClientEventData<T> {
+		private static DataError = class<T> extends ServerEventData<T> {
 			error: string;
 
 			constructor(error: string) {
@@ -83,16 +126,16 @@ export namespace client {
 			}
 		};
 
-		static Some<T>(data: T| undefined = undefined): ClientEventData<T> {
-			return new ClientEventData.DataSome(data);
+		static Some<T>(data: T| undefined = undefined): ServerEventData<T> {
+			return new ServerEventData.DataSome(data);
 		}
 
-		static Error(error: string): ClientEventData {
-			return new ClientEventData.DataError(error);
+		static Error(error: string): ServerEventData {
+			return new ServerEventData.DataError(error);
 		}
 
 		hasValue(): boolean {
-			return ! (this instanceof ClientEventData.DataError);
+			return ! (this instanceof ServerEventData.DataError);
 		}
 
 		getData(): T | never {
@@ -109,26 +152,4 @@ export namespace client {
 			throw new Error("No error present in ClientEventData (Some state)");
 		}
 	}
-
-
-/*	export class ClientEventData {
-		error?: string;
-		data: null | any;
-
-		constructor(error?: string, data?: any) {
-			if(error) {
-				this.error = error;
-				return;
-			}
-			this.data = data;
-		}
-
-		static Error(detail: string) {
-			return new ClientEventData(detail);
-		}
-
-		static Some(data?: any) {
-			return new ClientEventData(undefined, data);
-		}
-	}*/
 }

@@ -11,6 +11,8 @@ import LiveChatClient from "../../../services/LiveChatClient";
 import type { parameter } from "../../../services/type";
 
 type LoginInfo = parameter.LoginInfo;
+type WSSParameter = parameter.WSSParameter;
+type MessageParameter = parameter.MessageParameter;
 
 let client: LiveChatClient | null = null;
 export function addChromeEventListeners(mainWindow: BrowserWindow) {
@@ -28,6 +30,12 @@ export function addChromeEventListeners(mainWindow: BrowserWindow) {
 				const loginInfo = JSON.parse(args[0]) as LoginInfo;
 				return client?.loginAndConnect(loginInfo) ?? false;
 			case 'send':
+				const messageInfo = JSON.parse(args[0]) as {message: MessageParameter, to: number};
+				// TODO(dev)合成一个WSSParameter
+/*				const params: WSSParameter = {
+
+				}
+				return client?.sendMessage(params)*/
 				break;
 			case 'close':
 				client?.disconnect()

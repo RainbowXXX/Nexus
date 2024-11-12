@@ -3,6 +3,7 @@ import { parameter, response } from "@/services/type";
 
 type UserInfo = response.UserInfo;
 type LoginInfo = parameter.LoginInfo;
+type MessageParameter = parameter.MessageParameter;
 
 export interface ChatInfo {
 	friends_list: UserInfo[],
@@ -11,22 +12,9 @@ export interface ChatInfo {
 
 	connected: boolean;
 
+	send(message: MessageParameter, to: number): Promise<void>;
 	login(loginInfo: LoginInfo): Promise<boolean>;
 	logout(): void;
-}
-export interface Message {
-	"status": number,
-	"message": "success",
-	"application": "Nexus",
-	"type": "sys",
-	"timestamp": number,
-	"data": {
-		"type": "AliveUser",
-		"data": {
-			"total": number,
-			"aliveList": number[],
-		}
-	}
 }
 
 export const ChatInfoContext = createContext<ChatInfo>({
@@ -34,6 +22,7 @@ export const ChatInfoContext = createContext<ChatInfo>({
 	cur_user_info: null,
 	alive_user_ids: [],
 	connected: false,
+	send(message: MessageParameter, to: number) { return Promise.resolve(); },
 	login(_: LoginInfo){ return Promise.resolve(false); },
 	logout() {},
 });

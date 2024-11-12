@@ -1,12 +1,14 @@
 import WebSocket from "ws";
 import { ApiService } from "./request";
-import { client, parameter, response } from "./type";
+import { serverEvent, parameter, response } from "./type";
 import { mainWindow } from "../main";
-import ClientEventType = client.ClientEventType;
-import ClientEventData = client.ClientEventData;
+import ClientEventType = serverEvent.ServerEventType;
+import ClientEventData = serverEvent.ServerEventData;
 import UserInfo = response.UserInfo;
 import WSSResponse = response.WSSResponse;
 import InitialMessage = response.InitialMessage;
+import WSSParameter = parameter.WSSParameter;
+import ArriveMessage = response.ArriveMessage;
 
 let request: ApiService;
 
@@ -37,7 +39,7 @@ export default class LiveChatClient {
 	 * @param event_type
 	 * @param event_data
 	 */
-	async handleClientEvent(event_type: ClientEventType, event_data: ClientEventData) {
+	async handleServerEvent(event_type: ClientEventType, event_data: ClientEventData) {
 		// 将消息转发给前端
 		const forwardToFront = (event_channel: string, data: any) => {
 			console.debug('Forwarding', event_channel, data)
@@ -101,6 +103,11 @@ export default class LiveChatClient {
 						console.debug('Update alive user list: ', this.#aliveUserIdList);
 						forwardToFront('update', ClientEventData.Some({'alive_user_ids': this.#aliveUserIdList}));
 						break;
+					case "MessageDistribution":
+						let arrive_data = response_data as ArriveMessage;
+						console.debug('Message arrived: ', arrive_data.data, arrive_data.exchange);
+						forwardToFront('arrive', ClientEventData.Some({'message': arrive_data.data, exchange: arrive_data.exchange}));
+						break;
 					default:
 						break;
 				}
@@ -109,6 +116,18 @@ export default class LiveChatClient {
 				console.error(`Unsupported event type: ${event_type}.`);
 				break;
 		}
+	}
+
+	async sendMessage(param: WSSParameter): Promise<void> {
+		return new Promise((resolve, reject) => {
+			this.#webSocket?.send(JSON.stringify(param), (error) => {
+				if (error) {
+					reject(error);
+					return;
+				}
+				resolve();
+			})
+		})
 	}
 
 	/**
@@ -124,16 +143,16 @@ export default class LiveChatClient {
 		const { status, message, application, token } = login_response;
 		if ((status !== 0) || (application !== 'Nexus') || (!token)) {
 			console.error(`Fail to login to server:\n${message}`)
-			this.handleClientEvent('login', ClientEventData.Error('Failed to login'));
+			this.handleServerEvent('login', ClientEventData.Error('Failed to login'));
 			return false;
 		}
 
 		// assert(login_response.token !== null && login_response.token !== undefined);
 		if(login_response.token === null) {
-			this.handleClientEvent('login', ClientEventData.Error('Invalid token received from server'));
+			this.handleServerEvent('login', ClientEventData.Error('Invalid token received from server'));
 			return false;
 		}
-		this.handleClientEvent('login', ClientEventData.Some({'token' : login_response.token}));
+		this.handleServerEvent('login', ClientEventData.Some({'token' : login_response.token}));
 		return true;
 	}
 
@@ -156,18 +175,18 @@ export default class LiveChatClient {
 
 		socket.onopen = (_) => {
 			console.debug('Connected to WebSocket');
-			this.handleClientEvent('establish', ClientEventData.Some())
+			this.handleServerEvent('establish', ClientEventData.Some())
 		}
 
 		socket.onerror = (event) => {
 			console.debug('WebSocket error.');
-			this.handleClientEvent('terminate', ClientEventData.Some({message: event.message}) );
+			this.handleServerEvent('terminate', ClientEventData.Some({message: event.message}) );
 			socket.close();
 		}
 
 		socket.onclose = (event) => {
 			console.debug('WebSocket closed');
-			this.handleClientEvent('close', ClientEventData.Some({ reason: event.reason }));
+			this.handleServerEvent('close', ClientEventData.Some({ reason: event.reason }));
 		}
 
 		socket.onmessage = (event) => {
@@ -180,11 +199,11 @@ export default class LiveChatClient {
 					break;
 				default:
 					console.error(`Error message type: ${typeof event.data}`);
-					this.handleClientEvent('receive', ClientEventData.Error(`Error message type: ${typeof event.data}`));
+					this.handleServerEvent('receive', ClientEventData.Error(`Error message type: ${typeof event.data}`));
 					return;
 			}
 
-			this.handleClientEvent('receive', ClientEventData.Some(message));
+			this.handleServerEvent('receive', ClientEventData.Some(message));
 		}
 	}
 
