@@ -1,4 +1,7 @@
 import WebSocket from "ws";
+import nacl from 'tweetnacl';
+import naclUtil from 'tweetnacl-util';
+import SHA256 from 'crypto-js/sha256';
 import { ApiService } from "./request";
 import { serverEvent, parameter, response } from "./type";
 import { mainWindow } from "../main";
@@ -171,22 +174,24 @@ export default class LiveChatClient {
 				'Authorization': this.#loginToken,
 			}
 		});
-		this.#webSocket = socket;
 
 		socket.onopen = (_) => {
 			console.debug('Connected to WebSocket');
 			this.handleServerEvent('establish', ClientEventData.Some())
+			this.#webSocket = socket;
 		}
 
 		socket.onerror = (event) => {
 			console.debug('WebSocket error.');
 			this.handleServerEvent('terminate', ClientEventData.Some({message: event.message}) );
 			socket.close();
+			this.#webSocket = null;
 		}
 
 		socket.onclose = (event) => {
 			console.debug('WebSocket closed');
 			this.handleServerEvent('close', ClientEventData.Some({ reason: event.reason }));
+			this.#webSocket = null;
 		}
 
 		socket.onmessage = (event) => {
@@ -270,4 +275,21 @@ export default class LiveChatClient {
 		this.handleClientEvent('update_user', ClientEventData.Some(userInfos));
 
 	}*/
+
+	/**
+	 * 生成秘钥对
+	 */
+	async CreateKeyPair() {
+		const keyPair = nacl.sign.keyPair();
+		const publicKey = keyPair.publicKey;
+		const secretKey = keyPair.secretKey;
+		const publicKeyBase64 = naclUtil.encodeBase64(publicKey);
+		const secretKeyBase64 = naclUtil.encodeBase64(secretKey);
+		const publicKeyBase64Hash = SHA256(publicKeyBase64).toString();
+		// 输出密钥对
+		console.log("Public Key (Base64):", publicKeyBase64);
+		console.log("Secret Key (Base64):", secretKeyBase64);
+		this.#webSocket?.send
+		this.handleServerEvent('CreatKeyPair', ClientEventData.Some({'clientSecretKey' : secretKeyBase64, 'publicKeyVersion':publicKeyBase64Hash}));
+	}
 }
