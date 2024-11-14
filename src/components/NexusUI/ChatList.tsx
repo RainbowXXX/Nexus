@@ -1,4 +1,4 @@
-import React, { useContext } from "react";
+import React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,26 +6,25 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus } from "lucide-react";
 
 import styles from "@/styles/NexusUI/ChatList.module.css";
-import { ChatInfoContext } from "@/components/Contexts/ChatInfoContext";
+import { response } from "@/services/type";
 
-interface ChatListProps {
-	selectedChat: string
-	setSelectedChat: (chat: string) => void
+type UserInfo = response.UserInfo;
+
+interface ChatInfo extends UserInfo{
+	avatar: string;
+	lastMessage: string;
+	time: string;
+	unread: number;
 }
 
-export default function ChatList({ selectedChat, setSelectedChat }: ChatListProps) {
-	const chatInfos = useContext(ChatInfoContext);
-	const chats = chatInfos.friends_list.map((value) => {
-		return {
-			// TODO(dev) 添加id
-			id: 1,
-			name: value.name,
-			avatar: value.avatar??'/placeholder.svg?height=40&width=40',
-			lastMessage: 'test',
-			time: '19:25',
-			unread: 0,
-		}
-	})
+interface ChatListProps {
+	chatList: ChatInfo[];
+	selectedChat: UserInfo | undefined
+	setSelectedChat: (chat: UserInfo) => void
+}
+
+export default function ChatList({ chatList, selectedChat, setSelectedChat }: ChatListProps) {
+	console.log(chatList)
 
 	return (
 		<div className={styles.container}>
@@ -36,11 +35,11 @@ export default function ChatList({ selectedChat, setSelectedChat }: ChatListProp
 				</Button>
 			</div>
 			<ScrollArea className={styles.chatList}>
-				{chats.map((chat) => (
+				{chatList.map((chat, id) => (
 					<div
-						key={chat.id}
-						className={`${styles.chatItem} ${selectedChat === chat.name ? styles.selectedChat : ''}`}
-						onClick={() => setSelectedChat(chat.name)}
+						key={id}
+						className={`${styles.chatItem} ${selectedChat?.id === chat.id ? styles.selectedChat : ''}`}
+						onClick={() => setSelectedChat(chat)}
 					>
 						<Avatar className={styles.avatar}>
 							<AvatarImage src={chat.avatar} alt={chat.name} />

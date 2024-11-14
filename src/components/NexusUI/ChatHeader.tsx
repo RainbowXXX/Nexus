@@ -4,17 +4,17 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import styles from "@/styles/NexusUI/ChatHeader.module.css";
 
 interface ChatHeaderProps {
-	selectedChat: string;
+	selectedChatName: string;
 }
 
-export default function ChatHeader({ selectedChat }: ChatHeaderProps) {
+export default function ChatHeader({ selectedChatName }: ChatHeaderProps) {
 	return (
 		<div className={styles.container}>
 			<Avatar className={styles.avatar}>
-				<AvatarImage src="/placeholder.svg?height=40&width=40" alt={selectedChat} />
-				<AvatarFallback>{selectedChat[0]}</AvatarFallback>
+				<AvatarImage src="/placeholder.svg?height=40&width=40" alt={selectedChatName} />
+				<AvatarFallback>{selectedChatName[0]}</AvatarFallback>
 			</Avatar>
-			<span className={styles.chatName}>{selectedChat}</span>
+			<span className={styles.chatName}>{selectedChatName}</span>
 		</div>
 	);
 }

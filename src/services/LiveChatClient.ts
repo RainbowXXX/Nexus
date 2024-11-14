@@ -28,9 +28,7 @@ export default class LiveChatClient {
 	#webSocket: WebSocket | null = null;
 
 	#aliveUserIdList: number[] = [];
-	#friendIds: number[] | null = null;
 	#curUserInfo: UserInfo | null = null;
-	#friendInfoList: UserInfo[] | null = null;
 
 	constructor(serverUrl: string) {
 		this.#serverUrl = serverUrl;
@@ -45,7 +43,7 @@ export default class LiveChatClient {
 	async handleServerEvent(event_type: ClientEventType, event_data: ClientEventData) {
 		// 将消息转发给前端
 		const forwardToFront = (event_channel: string, data: any) => {
-			console.debug('Forwarding', event_channel, data)
+			console.debug('Forwarding', event_channel, JSON.stringify(data))
 			mainWindow?.webContents.send('client', event_channel, JSON.stringify(data));
 		}
 
@@ -69,7 +67,6 @@ export default class LiveChatClient {
 			case 'logout':
 				this.#loginToken = null;
 				this.#curUserInfo = null;
-				this.#friendInfoList = null;
 				this.#aliveUserIdList = [];
 				forwardToFront('logout', ClientEventData.Some());
 				break;
@@ -104,12 +101,14 @@ export default class LiveChatClient {
 						let alive_data = response_data as InitialMessage;
 						this.#aliveUserIdList = alive_data.data.aliveList;
 						console.debug('Update alive user list: ', this.#aliveUserIdList);
-						forwardToFront('update', ClientEventData.Some({ 'alive_user_ids': this.#aliveUserIdList }));
+						let userList = await this.getUserInfo(this.#aliveUserIdList)
+						forwardToFront('update', ClientEventData.Some({'friends_list': userList}));
 						break;
 					case "MessageDistribution":
 						let arrive_data = response_data as ArriveMessage;
 						console.debug('Message arrived: ', arrive_data.data, arrive_data.exchange);
-						forwardToFront('arrive', ClientEventData.Some({ 'message': arrive_data.data, exchange: arrive_data.exchange }));
+						let [from] = await this.getUserInfo([arrive_data.exchange.from]) as [UserInfo];
+						forwardToFront('arrive', ClientEventData.Some({'message': arrive_data.data, 'from': from}));
 						break;
 					default:
 						break;
@@ -267,13 +266,13 @@ export default class LiveChatClient {
 			if(! res) {
 				return false;
 			}
-	
+
 			let curUserInfo = await this.getCurrentUserInfo();
 			this.handleClientEvent('update_user', ClientEventData.Some(curUserInfo));
-	
+
 			let userInfos = await this.getUserInfo(this.#friendIds);
 			this.handleClientEvent('update_user', ClientEventData.Some(userInfos));
-	
+
 		}*/
 
 	/**
@@ -308,6 +307,9 @@ export default class LiveChatClient {
 			}
 		}
 		this.#webSocket?.send(JSON.stringify(param));
-		this.handleServerEvent('CreatKeyPair', ClientEventData.Some({ 'clientSecretKey': secretKeyBase64, 'publicKeyVersion': publicKeyBase64Hash }));
+		return {
+			'clientSecretKey': secretKeyBase64,
+			'publicKeyVersion': publicKeyBase64Hash
+		}
 	}
 }

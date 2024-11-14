@@ -61,18 +61,13 @@ export namespace response {
 			"from": number,
 			"to": number
 		},
-		"data": {
-			"messagetype": "text",
-			"message": string,
-			"timestamp": number
-		},
+		"data": parameter.MessageParameter,
 		"sign": string
 	}
 
 	export interface UserInfo {
+		"id": number,
 		"name": string,
-		"phone": string,
-		"email": null | string,
 		"avatar": null | string,
 	}
 

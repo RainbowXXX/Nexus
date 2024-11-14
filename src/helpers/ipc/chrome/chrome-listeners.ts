@@ -31,14 +31,27 @@ export function addChromeEventListeners(mainWindow: BrowserWindow) {
 				return client?.loginAndConnect(loginInfo) ?? false;
 			case 'send':
 				const messageInfo = JSON.parse(args[0]) as {message: MessageParameter, to: number};
-				// TODO(dev)合成一个WSSParameter
-/*				const params: WSSParameter = {
-
+				const params: WSSParameter = {
+					type: 'user',
+					application: 'Nexus',
+					timestamp: Date.now(),
+					data: {
+						publickeyversion: 'None',
+						type: 'MessageSend',
+						exchange: {
+							to: messageInfo.to,
+						},
+						data: messageInfo.message,
+						sign: '',
+					},
 				}
-				return client?.sendMessage(params)*/
-				break;
+				return client?.sendMessage(params)
 			case 'close':
 				client?.disconnect()
+				break;
+			case 'createKeyPair':
+				let new_key_pair = client?.CreateKeyPair();
+				console.log('New key pair: ', new_key_pair);
 				break;
 			default:
 				break;

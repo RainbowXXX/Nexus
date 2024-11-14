@@ -4,6 +4,7 @@ import { closeClient, createClient, loginServer, sendMessage } from "@/helpers/c
 import { serverEvent, parameter, response } from "@/services/type";
 import { ChatInfo, ChatInfoContext } from "../ChatInfoContext";
 
+type UserInfo = response.UserInfo;
 type LoginInfo = parameter.LoginInfo;
 type MessageParameter = parameter.MessageParameter;
 type ClientEventData = serverEvent.ServerEventData;
@@ -13,6 +14,7 @@ export default function ChatInfoProvider({ children }: { children: ReactNode }) 
 		friends_list: [],
 		alive_user_ids: [],
 		cur_user_info: null,
+		message_list: [],
 
 		connected: false,
 
@@ -29,28 +31,38 @@ export default function ChatInfoProvider({ children }: { children: ReactNode }) 
 			closeClient()
 		},
 	};
-	const handler = (event_type: 'login' | 'close' | 'update', data: ClientEventData) => {
-		console.log('handling',event_type)
+
+	const [chatInfo, setChatInfo] = useState(initialState);
+
+	const handler = (event_type: 'login' | 'close' | 'update' | 'arrive', data: ClientEventData) => {
+		console.log('handling', event_type)
 		switch (event_type) {
 			case "login":
-				if(data.hasValue()) {
+				if (data.hasValue()) {
 					let curUserData = data.getData();
+					console.log('login', {
+						...chatInfo,
+						connected: true,
+						cur_user_info: curUserData.curUserInfo,
+						friends_list: []
+					})
 					setChatInfo({
 						...chatInfo,
 						connected: true,
 						cur_user_info: curUserData.curUserInfo,
-						friends_list: [curUserData.curUserInfo]
+						friends_list: []
 					})
 				}
 				// 否则通知登录不成功
 				break;
 			case "close":
 				// TODO(dev) 添加意外中断的处理
+				console.log('close', initialState)
 				setChatInfo(initialState);
 				break;
 			case "update":
 				let update_data = data.getData();
-				console.debug({
+				console.log('update', {
 					...chatInfo,
 					...update_data,
 				})
@@ -59,18 +71,39 @@ export default function ChatInfoProvider({ children }: { children: ReactNode }) 
 					...update_data,
 				})
 				break;
+			case 'arrive':
+				let message_data = data.getData() as { 'message': MessageParameter, 'from': UserInfo };
+				console.log('arrive', {
+					...chatInfo,
+					message_list: [
+						... chatInfo.message_list,
+						{
+							'sender': message_data.from,
+							'content': message_data.message
+						}
+					],
+				})
+				setChatInfo({
+					...chatInfo,
+					message_list: [
+						... chatInfo.message_list,
+						{
+							'sender': message_data.from,
+							'content': message_data.message
+						}
+					],
+				})
+				break;
 			default:
 				break;
 		}
 	}
 
-	const [chatInfo, setChatInfo] = useState(initialState);
-
 	const settings = useContext(SettingContext);
 
 	useEffect(() => {
-		return window.chromeTools.ipc.on('client', (l, r) => handler(l, new serverEvent.ServerEventData<any>(JSON.parse(r))));
-	}, [setChatInfo]);
+		return window.chromeTools.ipc.on('client', (l, r) => { handler(l, new serverEvent.ServerEventData<any>(JSON.parse(r))) });
+	}, [chatInfo]);
 
 	useEffect(() => {
 		if(!settings[0].serverAddress) return;

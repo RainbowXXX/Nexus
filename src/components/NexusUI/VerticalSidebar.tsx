@@ -31,6 +31,14 @@ export default function VerticalSidebar() {
 				className={styles.avatar}
 				onClick={async () => {
 					toggleTheme();
+
+					// chatInfo.send({
+					// 	messagetype: 'text',
+					// 	message: 'test',
+					// 	timestamp: Date.now(),
+					// }, 1)
+
+					// createNewKeyPair();
 				}}
 				onContextMenu={async () => {
 					openDevTools();

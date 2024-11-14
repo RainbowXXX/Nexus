@@ -4,17 +4,29 @@ import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
 
 import styles from "@/styles/NexusUI/ChatArea.module.css";
+import { response } from "@/services/type";
+
+type UserInfo = response.UserInfo;
 
 interface ChatAreaProps {
-	selectedChat: string;
+	selectedChat: UserInfo| undefined;
 }
 
 export default function ChatArea({ selectedChat }: ChatAreaProps) {
 	return (
 		<div className={styles.container}>
-			<ChatHeader selectedChat={selectedChat} />
-			<MessageList />
-			<MessageInput />
+			{
+				selectedChat && (
+					<>
+						<ChatHeader
+							selectedChatName={selectedChat?.name ?? ""}
+						/>
+						<MessageList />
+						<MessageInput
+						chat_id={selectedChat?.id}
+						/>
+					</>)
+			}
 		</div>
 	);
 }

@@ -25,3 +25,6 @@ export async function closeClient(): Promise<void> {
 export async function sendMessage(message: MessageParameter, to: number) {
 	return await window.chromeTools.wss('send', JSON.stringify({message: message, to: to}));
 }
+export async function createNewKeyPair() {
+	return await window.chromeTools.wss('createKeyPair');
+}
