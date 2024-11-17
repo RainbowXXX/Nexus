@@ -254,6 +254,22 @@ export default class LiveChatClient {
 				let terminate_data = event_data as ClientEventData<{ 'message': string }>;
 				forwardToFront('close', ClientEventData.Error(terminate_data.getData().message));
 				break;
+			case "receive_send":
+				let receive_send_data = (event_data as ClientEventData<SendMessageParameter>).getData();
+				forwardToFront("arrive", ClientEventData.Some({
+					"message": receive_send_data.data,
+					"from": {
+						id: -1,
+						name: '',
+						avatar: '',
+					},
+					"to": {
+						id: receive_send_data.exchange.to,
+						name: '',
+						avatar: '',
+					},
+				}));
+				break;
 			case "receive":
 				// wss消息的处理
 				let receive_data = (event_data as ClientEventData<WSSResponse>).getData();
@@ -296,10 +312,23 @@ export default class LiveChatClient {
 						let arrive_data = response_data as ArriveMessage;
 						console.debug("Message arrived: ", arrive_data.data, arrive_data.exchange);
 						let publicKey = await this.getPublicKeyById(arrive_data.exchange.from);
+						if(arrive_data.exchange.from !== arrive_data.exchange.to) {
+							let [from, to] = await this.getUserInfo([arrive_data.exchange.from, arrive_data.exchange.to]) as [UserInfo, UserInfo];
+							let dataUnBoxed = this.ReceiveMessagePretreatment(receive_data, publicKey).data as ArriveMessage;
+							forwardToFront("arrive", ClientEventData.Some({
+								"message": dataUnBoxed.data,
+								"from": from,
+								"to": to
+							}));
+							break;
+						}
 						let [from] = await this.getUserInfo([arrive_data.exchange.from]) as [UserInfo];
-
 						let dataUnBoxed = this.ReceiveMessagePretreatment(receive_data, publicKey).data as ArriveMessage;
-						forwardToFront("arrive", ClientEventData.Some({ "message": dataUnBoxed.data, "from": from }));
+						forwardToFront("arrive", ClientEventData.Some({
+							"message": dataUnBoxed.data,
+							"from": from,
+							"to": from
+						}));
 						break;
 					}
 					default:
@@ -352,6 +381,7 @@ export default class LiveChatClient {
 	}
 
 	async sendMessage(param: SendMessageParameter): Promise<BaseResponse| undefined> {
+		this.handleServerEvent('receive_send', ClientEventData.Some(param))
 		let publicKey = await this.getPublicKeyById(param.exchange.to);
 		param.publickeyversion = publicKey ? SHA256(publicKey).toString() : 'None';
 		let tmp_param = this.SendMessagePretreatment(param, publicKey);
@@ -394,7 +424,7 @@ export default class LiveChatClient {
 			console.error('Log in before attempting to connect.');
 			throw new LiveChatError('Log in before attempting to connect');
 		}
-		const wsUrl = `ws://${this.#serverUrl}/api/wss?application=Nexus`
+		const wsUrl = `wss://${this.#serverUrl}/api/wss?application=Nexus`
 
 		let socket = new WebSocket(wsUrl, {
 			headers: {
@@ -544,7 +574,6 @@ export default class LiveChatClient {
 		assert(this.#secretKey !== null, 'Secret key is required');
 		const PublicKey = naclUtil.decodeBase64(_PublicKey)
 		const DHKey = nacl.scalarMult(this.#secretKey,PublicKey)
-		const binaryKey = String.fromCharCode(...DHKey);
 		return naclUtil.encodeBase64(DHKey)
 	}
 }

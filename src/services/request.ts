@@ -45,7 +45,7 @@ export class ApiService {
         }
 
         try {
-            const response = await fetch(`http://${this.#baseURL}${endpoint}`, options);
+            const response = await fetch(`https://${this.#baseURL}${endpoint}`, options);
             const responseJson = await response.json();
 			console.log(responseJson)
             if (!response.ok || responseJson.status != 0) {

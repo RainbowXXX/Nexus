@@ -72,7 +72,7 @@ export default function ChatInfoProvider({ children }: { children: ReactNode }) 
 				})
 				break;
 			case 'arrive':
-				let message_data = data.getData() as { 'message': MessageParameter, 'from': UserInfo };
+				let message_data = data.getData() as { 'message': MessageParameter, 'from': UserInfo, 'to': UserInfo };
 				console.log('arrive', {
 					...chatInfo,
 					message_list: [
@@ -89,6 +89,7 @@ export default function ChatInfoProvider({ children }: { children: ReactNode }) 
 						... chatInfo.message_list,
 						{
 							'sender': message_data.from,
+							'receiver': message_data.to,
 							'content': message_data.message
 						}
 					],

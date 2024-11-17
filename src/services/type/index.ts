@@ -119,7 +119,7 @@ export namespace response {
 }
 
 export namespace serverEvent {
-	export type ServerEventType = 'login' | 'logout' | 'establish' | 'close' | 'terminate' | 'receive';
+	export type ServerEventType = 'login' | 'logout' | 'establish' | 'close' | 'terminate' | 'receive' | 'receive_send';
 	export class ServerEventData<T = any> {
 		constructor(data: any = undefined) {
 			if(data === undefined) return;

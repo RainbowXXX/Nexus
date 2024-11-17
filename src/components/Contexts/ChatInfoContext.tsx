@@ -7,6 +7,7 @@ type MessageParameter = parameter.MessageParameter;
 
 interface MessageInfo {
 	sender: UserInfo,
+	receiver: UserInfo,
 	content: MessageParameter
 }
 

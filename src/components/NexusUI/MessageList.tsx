@@ -9,7 +9,8 @@ type UserInfo = response.UserInfo;
 
 export default function MessageList({cur_friend}: {cur_friend: UserInfo| undefined}) {
 	const chatInfo = useContext(ChatInfoContext);
-	const messages = chatInfo.message_list.map((message, id) => {
+	const curMessageList = chatInfo.message_list.filter((val) => ((val.receiver.id === cur_friend?.id) || (val.sender.id === cur_friend?.id)));
+	const messages = curMessageList.map((message, id) => {
 		let time = new Date(message.content.timestamp);
 		return {
 			id: id,
