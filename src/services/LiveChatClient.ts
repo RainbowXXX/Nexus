@@ -258,16 +258,8 @@ export default class LiveChatClient {
 				let receive_send_data = (event_data as ClientEventData<SendMessageParameter>).getData();
 				forwardToFront("arrive", ClientEventData.Some({
 					"message": receive_send_data.data,
-					"from": {
-						id: -1,
-						name: '',
-						avatar: '',
-					},
-					"to": {
-						id: receive_send_data.exchange.to,
-						name: '',
-						avatar: '',
-					},
+					"from": -1,
+					"to": receive_send_data.exchange.to,
 				}));
 				break;
 			case "receive":
@@ -312,22 +304,11 @@ export default class LiveChatClient {
 						let arrive_data = response_data as ArriveMessage;
 						console.debug("Message arrived: ", arrive_data.data, arrive_data.exchange);
 						let publicKey = await this.getPublicKeyById(arrive_data.exchange.from);
-						if (arrive_data.exchange.from !== arrive_data.exchange.to) {
-							let [from, to] = await this.getUserInfo([arrive_data.exchange.from, arrive_data.exchange.to]) as [UserInfo, UserInfo];
-							let dataUnBoxed = this.ReceiveMessagePretreatment(receive_data, publicKey).data as ArriveMessage;
-							forwardToFront("arrive", ClientEventData.Some({
-								"message": dataUnBoxed.data,
-								"from": from,
-								"to": to
-							}));
-							break;
-						}
-						let [from] = await this.getUserInfo([arrive_data.exchange.from]) as [UserInfo];
 						let dataUnBoxed = this.ReceiveMessagePretreatment(receive_data, publicKey).data as ArriveMessage;
 						forwardToFront("arrive", ClientEventData.Some({
 							"message": dataUnBoxed.data,
-							"from": from,
-							"to": from
+							"from": arrive_data.exchange.from,
+							"to": arrive_data.exchange.to
 						}));
 						break;
 					}

@@ -72,11 +72,11 @@ export default function ChatInfoProvider({ children }: { children: ReactNode }) 
 				})
 				break;
 			case 'arrive':
-				let message_data = data.getData() as { 'message': MessageParameter, 'from': UserInfo, 'to': UserInfo };
+				let message_data = data.getData() as { 'message': MessageParameter, 'from': number, 'to': number };
 				// 如果是别人发过来的消息
 				let message_updated;
-				if(message_data.from.id !== message_data.to.id && message_data.from.id !== -1) {
-					let from_id = message_data.from.id;
+				if(message_data.from !== message_data.to && message_data.from !== -1) {
+					let from_id = message_data.from;
 					message_updated = chatInfo.message_list;
 					let new_list = message_updated.get(from_id) ?? [];
 					new_list.push({
@@ -88,8 +88,8 @@ export default function ChatInfoProvider({ children }: { children: ReactNode }) 
 
 				// 否则就是自己发出的消息
 				else {
-					if(message_data.from.id === message_data.to.id) break;
-					let to_id = message_data.to.id;
+					if(message_data.from === message_data.to) break;
+					let to_id = message_data.to;
 					message_updated = chatInfo.message_list;
 					let new_list = message_updated.get(to_id) ?? [];
 					new_list.push({
