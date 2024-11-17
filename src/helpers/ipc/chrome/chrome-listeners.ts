@@ -13,8 +13,10 @@ import type { parameter } from "../../../services/type";
 type LoginInfo = parameter.LoginInfo;
 type WSSParameter = parameter.WSSParameter;
 type MessageParameter = parameter.MessageParameter;
+type SendMessageParameter = parameter.SendMessageParameter;
 
 let client: LiveChatClient | null = null;
+
 export function addChromeEventListeners(mainWindow: BrowserWindow) {
 	ipcMain.handle(CHROME_OPEN_DEVTOOLS_CHANNEL, () => mainWindow.webContents.openDevTools());
 	ipcMain.handle(CHROME_FETCH_DATA_CHANNEL, async (event, url: string, option: string, ...args: string[]):Promise<any> => {
@@ -31,19 +33,14 @@ export function addChromeEventListeners(mainWindow: BrowserWindow) {
 				return client?.loginAndConnect(loginInfo) ?? false;
 			case 'send':
 				const messageInfo = JSON.parse(args[0]) as {message: MessageParameter, to: number};
-				const params: WSSParameter = {
-					type: 'user',
-					application: 'Nexus',
-					timestamp: Date.now(),
-					data: {
-						publickeyversion: 'None',
-						type: 'MessageSend',
-						exchange: {
-							to: messageInfo.to,
-						},
-						data: messageInfo.message,
-						sign: '',
+				const params: SendMessageParameter = {
+					type: 'MessageSend',
+					publickeyversion: 'None',
+					exchange: {
+						to: messageInfo.to,
 					},
+					data: messageInfo.message,
+					sign: '',
 				}
 				return client?.sendMessage(params)
 			case 'close':
@@ -120,3 +117,5 @@ export function addChromeEventListeners(mainWindow: BrowserWindow) {
 		}
 	})
 }
+
+export {client};

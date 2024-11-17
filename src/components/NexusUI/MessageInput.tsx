@@ -39,6 +39,9 @@ export default function MessageInput({chat_id} : { chat_id: number| undefined })
 							message: message,
 							timestamp: Date.now()
 						}, chat_id)
+						if(inputRef.current) {
+							inputRef.current.value = ''
+						}
 					}
 				}}
 			>

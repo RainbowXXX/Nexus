@@ -21,7 +21,9 @@ export default function ChatArea({ selectedChat }: ChatAreaProps) {
 						<ChatHeader
 							selectedChatName={selectedChat?.name ?? ""}
 						/>
-						<MessageList />
+						<MessageList
+							cur_friend={selectedChat}
+						/>
 						<MessageInput
 						chat_id={selectedChat?.id}
 						/>

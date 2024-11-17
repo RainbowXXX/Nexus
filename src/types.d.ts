@@ -14,6 +14,7 @@ interface StoreObject {
 	set(key: string, value: string): Promise<void>;
 	get(key: string): Promise<string | null>;
 	remove(key: string): Promise<void>;
+	flush(): Promise<void>;
 }
 interface WindowStatus {
 	size: {

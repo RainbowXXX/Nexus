@@ -5,15 +5,125 @@ import SHA256 from 'crypto-js/sha256';
 import { ApiService } from "./request";
 import { serverEvent, parameter, response } from "./type";
 import { mainWindow } from "../main";
+import { v4 as uuidV4 } from "uuid";
+
+const CryptoJS = require('crypto-js');
+
 import ClientEventType = serverEvent.ServerEventType;
 import ClientEventData = serverEvent.ServerEventData;
 import UserInfo = response.UserInfo;
 import WSSResponse = response.WSSResponse;
+import BaseResponse = response.BaseResponse;
+import PublickeyMessage = response.PublickeyMessage;
 import InitialMessage = response.InitialMessage;
 import WSSParameter = parameter.WSSParameter;
 import ArriveMessage = response.ArriveMessage;
+import PublickeyParameter = parameter.PublickeyParameter;
+import SendMessageParameter = parameter.SendMessageParameter;
+import assert from "node:assert";
+import OnlineMessage = response.OnlineMessage;
+import OfflineMessage = response.OfflineMessage;
 
 let request: ApiService;
+
+class Queue<T> {
+	private queue: T[];
+	private resolvers: ((value: any) => void)[];
+
+	constructor() {
+		this.queue = [];
+		this.resolvers = [];
+	}
+
+	enqueue(item: T) {
+		const cur_resolve = this.resolvers.shift()
+		if (cur_resolve !== undefined) {
+			cur_resolve(item);
+		} else {
+			this.queue.push(item);
+		}
+	}
+
+	dequeue() {
+		if (this.queue.length > 0) {
+			return Promise.resolve(this.queue.shift());
+		} else {
+			return new Promise(resolve => {
+				this.resolvers.push(resolve);
+			});
+		}
+	}
+
+	isEmpty() {
+		return this.queue.length === 0;
+	}
+
+	size() {
+		return this.queue.length;
+	}
+}
+
+class AwaitableMap<Tx, Ty> {
+	private map: Map<Tx, Ty>;
+	private waitingResolvers: Map<Tx, ((value: Ty| undefined) => void)[]>;
+	constructor() {
+		this.map = new Map(); // 存储键值对
+		this.waitingResolvers = new Map(); // 存储等待中的 Promise
+	}
+
+	set(key: Tx, value: Ty) {
+		this.map.set(key, value);
+
+		// 如果有等待该键的 Promise，则立即 resolve
+		let resolvers = this.waitingResolvers.get(key);
+		if (resolvers !== undefined) {
+			resolvers.forEach(resolve => resolve(value));
+			this.waitingResolvers.delete(key);
+		}
+	}
+
+	async get(key: Tx): Promise<Ty| undefined> {
+		if (this.map.has(key)) {
+			return this.map.get(key);
+		} else {
+			return new Promise(resolve => {
+				if (!this.waitingResolvers.has(key)) {
+					this.waitingResolvers.set(key, [resolve]);
+				}
+				else {
+					this.waitingResolvers.get(key)?.push(resolve);
+				}
+			});
+		}
+	}
+
+	has(key: Tx) {
+		return this.map.has(key);
+	}
+
+	// 删除键
+	delete(key: Tx) {
+		const result = this.map.delete(key);
+
+		if (this.waitingResolvers.has(key)) {
+			this.waitingResolvers.get(key)?.forEach(resolve =>
+				resolve(undefined)
+			);
+			this.waitingResolvers.delete(key);
+		}
+
+		return result;
+	}
+
+	clear() {
+		this.map.clear();
+
+		this.waitingResolvers.forEach(resolvers => {
+			resolvers.forEach(resolve => resolve(undefined));
+		});
+		this.waitingResolvers.clear();
+	}
+}
 
 export class LiveChatError extends Error {
 	constructor(message?: string) {
@@ -23,16 +133,67 @@ export class LiveChatError extends Error {
 }
 
 export default class LiveChatClient {
-	#serverUrl: string
-	#loginToken: string | null = null;
-	#webSocket: WebSocket | null = null;
+	#serverUrl: string; // 服务器地址
+	#loginToken: string | null = null; // 登录后的令牌
+	#webSocket: WebSocket | null = null; // websocket 连接
 
-	#aliveUserIdList: number[] = [];
-	#curUserInfo: UserInfo | null = null;
+	#aliveUserIdList: number[] = []; // 活跃用户的id
+	#curUserInfo: UserInfo | null = null; // 当前用户信息
+
+	#secretKey: Uint8Array | null = null;
+
+	#newConnect:boolean = true;
+
+	#publicKeyMap: AwaitableMap<number, string | undefined> = new AwaitableMap();
+
+	#messageQueue: AwaitableMap<string, BaseResponse> = new AwaitableMap(); // 消息队列 TODO(dev) 实现消息的可等待
 
 	constructor(serverUrl: string) {
 		this.#serverUrl = serverUrl;
 		request = new ApiService(serverUrl);
+	}
+
+	async wssSend(param: WSSParameter): Promise<undefined| BaseResponse> {
+		return new Promise( async (resolve, reject) => {
+			if(this.#webSocket === null) {
+				// TODO(dev) 处理webSocket没有创建或者意外断开的情况
+				reject('WebSocket not available');
+				return;
+			}
+			this.#webSocket.send(JSON.stringify(param),(error) => {
+				if (error) {
+					reject(error);
+					return;
+				}
+			})
+			if(param.serial === undefined) resolve(undefined);
+			else{
+				 resolve(await this.#messageQueue.get(param.serial));
+			}
+		})
+	}
+
+	makeWssParameter(param: any): WSSParameter {
+		return {
+			application: 'Nexus',
+			type: 'user',
+			serial: uuidV4().toString(),
+			timestamp: Date.now(),
+			data: param,
+		}
+	}
+
+	async getPublicKeyById(user_id: number): Promise<string| undefined> {
+		let param: PublickeyParameter = {
+			type: 'GetPublickey',
+			target: user_id,
+		}
+		let wssParam = this.makeWssParameter(param)
+		let response = await this.wssSend(wssParam);
+
+		if(response === undefined) return undefined;
+		let res = response as WSSResponse;
+		return (res.data as PublickeyMessage).publickey;
 	}
 
 	/**
@@ -40,12 +201,13 @@ export default class LiveChatClient {
 	 * @param event_type
 	 * @param event_data
 	 */
-	async handleServerEvent(event_type: ClientEventType, event_data: ClientEventData) {
+	private async handleServerEvent(event_type: ClientEventType, event_data: ClientEventData) {
 		// 将消息转发给前端
 		const forwardToFront = (event_channel: string, data: any) => {
 			console.debug('Forwarding', event_channel, JSON.stringify(data))
 			mainWindow?.webContents.send('client', event_channel, JSON.stringify(data));
 		}
+		console.debug('server event, type:', event_type, 'data:', JSON.stringify(event_data))
 
 		switch (event_type) {
 			case "login":
@@ -95,22 +257,53 @@ export default class LiveChatClient {
 			case "receive":
 				// wss消息的处理
 				let receive_data = (event_data as ClientEventData<WSSResponse>).getData();
+				// 如果是一个回复消息
+				if(receive_data.serial !== undefined) {
+					this.#messageQueue.set(receive_data.serial, receive_data);
+					break;
+				}
+
+				// 否则是服务器的通知
 				let response_data = receive_data.data;
 				switch (response_data.type) {
-					case "AliveUser":
+					case "UserOnline": {
+						let online_data = response_data as OnlineMessage;
+						let online_id = online_data.data.userid;
+						if(this.#aliveUserIdList.find((val) => (val === online_id)) === undefined) {
+							this.#aliveUserIdList.push(online_id);
+						}
+						let userList = await this.getUserInfo(this.#aliveUserIdList)
+						forwardToFront('update', ClientEventData.Some({ 'friends_list': userList }));
+						break;
+					}
+					case "UserOffline": {
+						let online_data = response_data as OfflineMessage;
+						let online_id = online_data.data.userid;
+						this.#aliveUserIdList = this.#aliveUserIdList.filter((val) => val !== online_id)
+						let userList = await this.getUserInfo(this.#aliveUserIdList)
+						forwardToFront('update', ClientEventData.Some({ 'friends_list': userList }));
+						break;
+					}
+					case "AliveUser": {
 						let alive_data = response_data as InitialMessage;
 						this.#aliveUserIdList = alive_data.data.aliveList;
-						console.debug('Update alive user list: ', this.#aliveUserIdList);
-						let userList = await this.getUserInfo(this.#aliveUserIdList)
-						forwardToFront('update', ClientEventData.Some({'friends_list': userList}));
+						console.debug("Update alive user list: ", this.#aliveUserIdList);
+						let userList = await this.getUserInfo(this.#aliveUserIdList);
+						forwardToFront("update", ClientEventData.Some({ "friends_list": userList }));
 						break;
-					case "MessageDistribution":
+					}
+					case "MessageDistribution": {
 						let arrive_data = response_data as ArriveMessage;
-						console.debug('Message arrived: ', arrive_data.data, arrive_data.exchange);
+						console.debug("Message arrived: ", arrive_data.data, arrive_data.exchange);
+						let publicKey = await this.getPublicKeyById(arrive_data.exchange.from);
 						let [from] = await this.getUserInfo([arrive_data.exchange.from]) as [UserInfo];
-						forwardToFront('arrive', ClientEventData.Some({'message': arrive_data.data, 'from': from}));
+
+						let dataUnBoxed = this.ReceiveMessagePretreatment(receive_data, publicKey).data as ArriveMessage;
+						forwardToFront("arrive", ClientEventData.Some({ "message": dataUnBoxed.data, "from": from }));
 						break;
+					}
 					default:
+						console.error(`Unsupported server notice type: ${response_data.type}.`)
 						break;
 				}
 				break;
@@ -120,16 +313,51 @@ export default class LiveChatClient {
 		}
 	}
 
-	async sendMessage(param: WSSParameter): Promise<void> {
-		return new Promise((resolve, reject) => {
-			this.#webSocket?.send(JSON.stringify(param), (error) => {
-				if (error) {
-					reject(error);
-					return;
-				}
-				resolve();
-			})
-		})
+	/**
+	 * 发送数据预处理: 加密和签名
+	 * @param param 需要预处理的数据
+	 * @param receiverPublicKey 接收方的公钥
+	 */
+	private SendMessagePretreatment(param: SendMessageParameter, receiverPublicKey: string| undefined) {
+		let paramBoxed = param;
+
+		// 如果私钥已经生成， 则加密
+		if(this.#secretKey !== null && receiverPublicKey !== undefined) {
+			let data_str = JSON.stringify(param.data);
+			const encryptedData = CryptoJS.AES.encrypt(data_str,this.GetDHKey(receiverPublicKey)).toString();
+			void encryptedData;
+			paramBoxed.data = encryptedData;
+		}
+
+		return paramBoxed;
+	}
+	/**
+	 * 发送数据预处理: 加密和签名
+	 * @param response 需要预处理的数据
+	 * @param senderPublicKey 发送方的公钥
+	 */
+	private ReceiveMessagePretreatment(response: WSSResponse, senderPublicKey: string| undefined) {
+		let responseUnBoxed = response;
+		let dataUnBoxed = responseUnBoxed.data as ArriveMessage;
+
+		// 如果私钥已经生成， 则加密
+		if(this.#secretKey !== null && senderPublicKey !== undefined && typeof(dataUnBoxed.data) === 'string') {
+			let data_str = dataUnBoxed.data;
+			const decryptedData = CryptoJS.AES.decrypt(data_str, this.GetDHKey(senderPublicKey)).toString(CryptoJS.enc.Utf8);
+			dataUnBoxed.data = JSON.parse(decryptedData);
+		}
+
+		responseUnBoxed.data = dataUnBoxed;
+		return responseUnBoxed;
+	}
+
+	async sendMessage(param: SendMessageParameter): Promise<BaseResponse| undefined> {
+		let publicKey = await this.getPublicKeyById(param.exchange.to);
+		param.publickeyversion = publicKey ? SHA256(publicKey).toString() : 'None';
+		let tmp_param = this.SendMessagePretreatment(param, publicKey);
+		let wss_param = this.makeWssParameter(tmp_param);
+		console.debug('paramFinal:', wss_param);
+		return this.wssSend(wss_param);
 	}
 
 	/**
@@ -140,7 +368,7 @@ export default class LiveChatClient {
 		let response = await request.post('/api/application/login', loginInfo)
 
 		let login_response = await response as response.LoginResponse;
-		console.log(login_response)
+		console.debug('login response: ', login_response)
 
 		const { status, message, application, token } = login_response;
 		if ((status !== 0) || (application !== 'Nexus') || (!token)) {
@@ -166,7 +394,7 @@ export default class LiveChatClient {
 			console.error('Log in before attempting to connect.');
 			throw new LiveChatError('Log in before attempting to connect');
 		}
-		const wsUrl = `wss://${this.#serverUrl}/api/wss?application=Nexus`
+		const wsUrl = `ws://${this.#serverUrl}/api/wss?application=Nexus`
 
 		let socket = new WebSocket(wsUrl, {
 			headers: {
@@ -176,8 +404,9 @@ export default class LiveChatClient {
 
 		socket.onopen = (_) => {
 			console.debug('Connected to WebSocket');
-			this.handleServerEvent('establish', ClientEventData.Some())
 			this.#webSocket = socket;
+			this.handleServerEvent('establish', ClientEventData.Some())
+
 		}
 
 		socket.onerror = (event) => {
@@ -195,7 +424,6 @@ export default class LiveChatClient {
 
 		socket.onmessage = (event) => {
 			console.debug('Receive message', event.data);
-
 			let message;
 			switch (typeof event.data) {
 				case 'string':
@@ -206,7 +434,14 @@ export default class LiveChatClient {
 					this.handleServerEvent('receive', ClientEventData.Error(`Error message type: ${typeof event.data}`));
 					return;
 			}
-
+			if(message.data.type==="RefreshPublickey" && message.message ==="success" && message.info ==="success"){
+				console.info('证书更新成功！')
+				this.#newConnect = false;
+			}
+			if(this.#newConnect){
+				console.info('尝试更新证书。。。')
+				this.CreateKeyPair();
+			}
 			this.handleServerEvent('receive', ClientEventData.Some(message));
 		}
 	}
@@ -276,25 +511,19 @@ export default class LiveChatClient {
 		}*/
 
 	/**
-	 * @deprecated 该函数可能在未来版本中被修改或替代。
+	 * //@deprecated 该函数可能在未来版本中被修改或替代。
 	 * 生成秘钥对
 	 */
 	async CreateKeyPair() {
-		const keyPair = nacl.sign.keyPair();
+		const keyPair = nacl.box.keyPair();
 		const publicKey = keyPair.publicKey;
 		const secretKey = keyPair.secretKey;
 		const publicKeyBase64 = naclUtil.encodeBase64(publicKey);
-		const secretKeyBase64 = naclUtil.encodeBase64(secretKey);
 		const publicKeyBase64Hash = SHA256(publicKeyBase64).toString();
 		const messageUint8 = naclUtil.decodeUTF8(publicKeyBase64Hash + publicKeyBase64);
-		const signature = nacl.sign.detached(messageUint8, secretKey);
+		const signKeyPair = nacl.sign.keyPair()
+		const signature = nacl.sign.detached(messageUint8, signKeyPair.secretKey);
 		const signatureBase64 =  naclUtil.encodeBase64(signature);
-		// 输出密钥对
-		console.log("Public Key (Base64):", publicKeyBase64);
-		console.log("Secret Key (Base64):", secretKeyBase64);
-		console.log("Secret Key Version:", publicKeyBase64Hash);
-		console.log("Sign Message:", publicKeyBase64Hash + publicKeyBase64);
-		console.log("Sign (Base64):", signatureBase64);
 		const param = {
 			application: "Nexus",
 			type: "user",
@@ -303,13 +532,19 @@ export default class LiveChatClient {
 				type: "RefreshPublickey",
 				publickeyversion: publicKeyBase64Hash,
 				newpublickey: publicKeyBase64,
+				signPub:naclUtil.encodeBase64(signKeyPair.publicKey),
 				sign: signatureBase64
 			}
 		}
+		this.#secretKey = secretKey;
 		this.#webSocket?.send(JSON.stringify(param));
-		return {
-			'clientSecretKey': secretKeyBase64,
-			'publicKeyVersion': publicKeyBase64Hash
-		}
+	}
+
+	GetDHKey(_PublicKey:string){
+		assert(this.#secretKey !== null, 'Secret key is required');
+		const PublicKey = naclUtil.decodeBase64(_PublicKey)
+		const DHKey = nacl.scalarMult(this.#secretKey,PublicKey)
+		const binaryKey = String.fromCharCode(...DHKey);
+		return naclUtil.encodeBase64(DHKey)
 	}
 }

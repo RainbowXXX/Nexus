@@ -17,8 +17,7 @@ export namespace parameter {
 		"timestamp": number
 	}
 	export interface SendMessageParameter {
-		// 保留字段
-		"publickeyversion": "None",
+		"publickeyversion": string| "None",
 
 		"type": "MessageSend",
 		"exchange": {
@@ -26,6 +25,10 @@ export namespace parameter {
 		},
 		"data": MessageParameter,
 		"sign": string,
+	}
+	export interface PublickeyParameter {
+		"type": "GetPublickey",
+		"target": number
 	}
 
     export interface LoginInfo {
@@ -37,6 +40,7 @@ export namespace parameter {
 	interface WSSBaseParameter {
 		"application": 'Nexus',
 		"type": "user",
+		"serial": string| undefined,
 		"timestamp": number,
 		"data": any,
 	}
@@ -61,8 +65,26 @@ export namespace response {
 			"from": number,
 			"to": number
 		},
-		"data": parameter.MessageParameter,
+		"data": parameter.MessageParameter| string,
 		"sign": string
+	}
+	export interface PublickeyMessage {
+		"type": "GetPublickey",
+		"target": number,
+		"version": string| undefined,
+		"publickey": string| undefined,
+	}
+	export interface OnlineMessage {
+		"type": "UserOnline",
+		"data": {
+			"userid": number
+		}
+	}
+	export interface OfflineMessage {
+		"type": "UserOffline",
+		"data": {
+			"userid": number
+		}
 	}
 
 	export interface UserInfo {
@@ -77,6 +99,7 @@ export namespace response {
 	}
 	export interface WSSBaseResponse extends BaseResponse {
 		"type": "sys" | 'user' | string,
+		"serial": string| undefined,
 		"timestamp": number,
 		"data": any,
 	}
@@ -89,13 +112,14 @@ export namespace response {
 		data: null | UserInfo | UserInfo[]
 	}
 
+	export type DataType = InitialMessage| ArriveMessage| PublickeyMessage| OnlineMessage| OfflineMessage;
 	export interface WSSResponse extends WSSBaseResponse {
-		"data": InitialMessage| ArriveMessage,
+		"data": DataType,
 	}
 }
 
 export namespace serverEvent {
-	export type ServerEventType = 'login' | 'logout' | 'establish' | 'close' | 'terminate' | 'receive' | 'CreatKeyPair';
+	export type ServerEventType = 'login' | 'logout' | 'establish' | 'close' | 'terminate' | 'receive';
 	export class ServerEventData<T = any> {
 		constructor(data: any = undefined) {
 			if(data === undefined) return;

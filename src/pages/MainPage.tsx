@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import VerticalSidebar from "../components/NexusUI/VerticalSidebar";
 import ChatList from "../components/NexusUI/ChatList";
 import ChatArea from "../components/NexusUI/ChatArea";
@@ -24,6 +24,13 @@ export default function MainPage() {
 		}
 	})
 	const [selectedChat, setSelectedChat] = useState<UserInfo|undefined>(undefined);
+
+	useEffect(() => {
+		if(selectedChat) {
+			let res = chatInfos.friends_list.find((value) => value.id === selectedChat?.id)
+			setSelectedChat(res);
+		}
+	}, [chatInfos]);
 
 	return (
 		<div

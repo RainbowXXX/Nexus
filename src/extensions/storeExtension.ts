@@ -24,6 +24,11 @@ const storage: StoreObject = {
 		delete map[key];
 		return Promise.resolve();
 	},
+	flush() {
+		console.log('flushing');
+		fs.writeFileSync(dataFile, JSON.stringify(map));
+		return Promise.resolve();
+	},
 }
 
 export function mountStore(_: BrowserWindow) {

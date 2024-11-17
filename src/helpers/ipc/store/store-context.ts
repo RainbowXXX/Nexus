@@ -1,5 +1,10 @@
 import { ipcRenderer } from "electron";
-import { STORE_GET_DATA_CHANNEL, STORE_REMOVE_DATA_CHANNEL, STORE_SET_DATA_CHANNEL } from "./store-channels";
+import {
+	STORE_FLUSH_CHANNEL,
+	STORE_GET_DATA_CHANNEL,
+	STORE_REMOVE_DATA_CHANNEL,
+	STORE_SET_DATA_CHANNEL,
+} from "./store-channels";
 
 const storage: StoreObject = {
 	get(key: string): Promise<string | null> {
@@ -16,6 +21,12 @@ const storage: StoreObject = {
 	remove(key: string): Promise<void> {
 		return new Promise(async (resolve, _) => {
 			await ipcRenderer.invoke(STORE_REMOVE_DATA_CHANNEL, key)
+			resolve();
+		})
+	},
+	flush(): Promise<void> {
+		return new Promise(async (resolve, _) => {
+			await ipcRenderer.invoke(STORE_FLUSH_CHANNEL);
 			resolve();
 		})
 	}

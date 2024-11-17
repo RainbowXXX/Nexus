@@ -18,6 +18,7 @@ export default function SettingProvider({ children }: { children: ReactNode }) {
 		setSetting(setting);
 		console.log('Setting update:', setting);
 		storage.set('setting', JSON.stringify(setting));
+		storage.flush();
 	}
 
 	return (
