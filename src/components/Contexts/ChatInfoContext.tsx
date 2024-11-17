@@ -5,16 +5,15 @@ type UserInfo = response.UserInfo;
 type LoginInfo = parameter.LoginInfo;
 type MessageParameter = parameter.MessageParameter;
 
-interface MessageInfo {
-	sender: UserInfo,
-	receiver: UserInfo,
+export interface MessageInfo {
+	sender: number,
 	content: MessageParameter
 }
 
 export interface ChatInfo {
 	friends_list: UserInfo[],
 	alive_user_ids: number[];
-	message_list: MessageInfo[],
+	message_list: Map<number, MessageInfo[]>,
 	cur_user_info: UserInfo| null,
 
 	connected: boolean;
@@ -28,7 +27,7 @@ export const ChatInfoContext = createContext<ChatInfo>({
 	friends_list: [],
 	cur_user_info: null,
 	alive_user_ids: [],
-	message_list: [],
+	message_list: new Map(),
 	connected: false,
 	send(_message: MessageParameter, _to: number) { return Promise.resolve(); },
 	login(_: LoginInfo){ return Promise.resolve(false); },

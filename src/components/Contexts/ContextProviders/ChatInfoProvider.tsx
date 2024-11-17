@@ -2,7 +2,7 @@ import React, { ReactNode, useContext, useEffect, useState } from "react";
 import { SettingContext } from "@/components/Contexts/SettingsContext";
 import { closeClient, createClient, loginServer, sendMessage } from "@/helpers/chrome_heplers";
 import { serverEvent, parameter, response } from "@/services/type";
-import { ChatInfo, ChatInfoContext } from "../ChatInfoContext";
+import { ChatInfo, ChatInfoContext, MessageInfo } from "../ChatInfoContext";
 
 type UserInfo = response.UserInfo;
 type LoginInfo = parameter.LoginInfo;
@@ -14,7 +14,7 @@ export default function ChatInfoProvider({ children }: { children: ReactNode }) 
 		friends_list: [],
 		alive_user_ids: [],
 		cur_user_info: null,
-		message_list: [],
+		message_list: new Map(),
 
 		connected: false,
 
@@ -73,26 +73,35 @@ export default function ChatInfoProvider({ children }: { children: ReactNode }) 
 				break;
 			case 'arrive':
 				let message_data = data.getData() as { 'message': MessageParameter, 'from': UserInfo, 'to': UserInfo };
-				console.log('arrive', {
-					...chatInfo,
-					message_list: [
-						... chatInfo.message_list,
-						{
-							'sender': message_data.from,
-							'content': message_data.message
-						}
-					],
-				})
+				// 如果是别人发过来的消息
+				let message_updated;
+				if(message_data.from.id !== message_data.to.id && message_data.from.id !== -1) {
+					let from_id = message_data.from.id;
+					message_updated = chatInfo.message_list;
+					let new_list = message_updated.get(from_id) ?? [];
+					new_list.push({
+						sender: from_id,
+						content: message_data.message,
+					})
+					message_updated.set(from_id, new_list);
+				}
+
+				// 否则就是自己发出的消息
+				else {
+					if(message_data.from.id === message_data.to.id) break;
+					let to_id = message_data.to.id;
+					message_updated = chatInfo.message_list;
+					let new_list = message_updated.get(to_id) ?? [];
+					new_list.push({
+						sender: -1,
+						content: message_data.message,
+					})
+					message_updated.set(to_id, new_list);
+				}
+
 				setChatInfo({
 					...chatInfo,
-					message_list: [
-						... chatInfo.message_list,
-						{
-							'sender': message_data.from,
-							'receiver': message_data.to,
-							'content': message_data.message
-						}
-					],
+					message_list: message_updated,
 				})
 				break;
 			default:
