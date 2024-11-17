@@ -27,6 +27,7 @@ export function addChromeEventListeners(mainWindow: BrowserWindow) {
 		switch (action) {
 			case 'create':
 				client = new LiveChatClient(args[0]);
+				await client.tryAutoLogin();
 				break;
 			case 'login':
 				const loginInfo = JSON.parse(args[0]) as LoginInfo;

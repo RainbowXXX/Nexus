@@ -6,6 +6,7 @@ import { ApiService } from "./request";
 import { serverEvent, parameter, response } from "./type";
 import { mainWindow } from "../main";
 import { v4 as uuidV4 } from "uuid";
+import storage from "../extensions/storeExtension";
 
 const CryptoJS = require('crypto-js');
 
@@ -455,6 +456,27 @@ export default class LiveChatClient {
 			}
 			this.handleServerEvent('receive', ClientEventData.Some(message));
 		}
+	}
+
+	async tryAutoLogin() {
+		try {
+			let store = await storage.get('User') ?? '';
+			this.#loginToken = JSON.parse(store).token;
+			if(this.#loginToken === null) {
+				console.info('Fail to auto login: no valid token found.');
+				return false;
+			}
+			console.log('Cur token', this.#loginToken)
+			request.updateToken(this.#loginToken)
+
+			await this.getCurrentUserInfo();
+			await this.connect();
+			return true;
+		}
+		catch (error) {
+			console.warn('Fail to auto login.', error);
+		}
+		return false;
 	}
 
 	/**

@@ -29,7 +29,7 @@
 }
 
 .otherMessageContent {
-	background-color: hsl(var(--secondary));
+	background-color: hsl(var(--chatlist-background));
 }
 
 .messageTime {

@@ -9,15 +9,15 @@ export class ApiService {
 
     constructor(baseURL: string) {
         this.#baseURL = baseURL;
-		storage.get('User').then((res) => {
-			this.#Storage_Userstring = res
-			if (this.#Storage_Userstring) {
-				this.#Storage_User = JSON.parse(this.#Storage_Userstring)
-			} else {
-				this.#Storage_User = null
-			}
-			this.#UserToken = this.#Storage_User?.token ? this.#Storage_User.token : '';
-		})
+		// storage.get('User').then((res) => {
+		// 	this.#Storage_Userstring = res
+		// 	if (this.#Storage_Userstring) {
+		// 		this.#Storage_User = JSON.parse(this.#Storage_Userstring)
+		// 	} else {
+		// 		this.#Storage_User = null
+		// 	}
+		// 	this.#UserToken = this.#Storage_User?.token ? this.#Storage_User.token : '';
+		// })
     }
 
 	updateToken(token: string) {
