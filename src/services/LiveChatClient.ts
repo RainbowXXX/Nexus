@@ -65,7 +65,7 @@ class Queue<T> {
 
 class AwaitableMap<Tx, Ty> {
 	private map: Map<Tx, Ty>;
-	private waitingResolvers: Map<Tx, ((value: Ty| undefined) => void)[]>;
+	private waitingResolvers: Map<Tx, ((value: Ty | undefined) => void)[]>;
 	constructor() {
 		this.map = new Map(); // 存储键值对
 		this.waitingResolvers = new Map(); // 存储等待中的 Promise
@@ -82,7 +82,7 @@ class AwaitableMap<Tx, Ty> {
 		}
 	}
 
-	async get(key: Tx): Promise<Ty| undefined> {
+	async get(key: Tx): Promise<Ty | undefined> {
 		if (this.map.has(key)) {
 			return this.map.get(key);
 		} else {
@@ -142,7 +142,7 @@ export default class LiveChatClient {
 
 	#secretKey: Uint8Array | null = null;
 
-	#newConnect:boolean = true;
+	#newConnect: boolean = true;
 
 	#publicKeyMap: AwaitableMap<number, string | undefined> = new AwaitableMap();
 
@@ -153,22 +153,22 @@ export default class LiveChatClient {
 		request = new ApiService(serverUrl);
 	}
 
-	async wssSend(param: WSSParameter): Promise<undefined| BaseResponse> {
-		return new Promise( async (resolve, reject) => {
-			if(this.#webSocket === null) {
+	async wssSend(param: WSSParameter): Promise<undefined | BaseResponse> {
+		return new Promise(async (resolve, reject) => {
+			if (this.#webSocket === null) {
 				// TODO(dev) 处理webSocket没有创建或者意外断开的情况
 				reject('WebSocket not available');
 				return;
 			}
-			this.#webSocket.send(JSON.stringify(param),(error) => {
+			this.#webSocket.send(JSON.stringify(param), (error) => {
 				if (error) {
 					reject(error);
 					return;
 				}
 			})
-			if(param.serial === undefined) resolve(undefined);
-			else{
-				 resolve(await this.#messageQueue.get(param.serial));
+			if (param.serial === undefined) resolve(undefined);
+			else {
+				resolve(await this.#messageQueue.get(param.serial));
 			}
 		})
 	}
@@ -183,7 +183,7 @@ export default class LiveChatClient {
 		}
 	}
 
-	async getPublicKeyById(user_id: number): Promise<string| undefined> {
+	async getPublicKeyById(user_id: number): Promise<string | undefined> {
 		let param: PublickeyParameter = {
 			type: 'GetPublickey',
 			target: user_id,
@@ -191,7 +191,7 @@ export default class LiveChatClient {
 		let wssParam = this.makeWssParameter(param)
 		let response = await this.wssSend(wssParam);
 
-		if(response === undefined) return undefined;
+		if (response === undefined) return undefined;
 		let res = response as WSSResponse;
 		return (res.data as PublickeyMessage).publickey;
 	}
@@ -274,7 +274,7 @@ export default class LiveChatClient {
 				// wss消息的处理
 				let receive_data = (event_data as ClientEventData<WSSResponse>).getData();
 				// 如果是一个回复消息
-				if(receive_data.serial !== undefined) {
+				if (receive_data.serial !== undefined) {
 					this.#messageQueue.set(receive_data.serial, receive_data);
 					break;
 				}
@@ -285,7 +285,7 @@ export default class LiveChatClient {
 					case "UserOnline": {
 						let online_data = response_data as OnlineMessage;
 						let online_id = online_data.data.userid;
-						if(this.#aliveUserIdList.find((val) => (val === online_id)) === undefined) {
+						if (this.#aliveUserIdList.find((val) => (val === online_id)) === undefined) {
 							this.#aliveUserIdList.push(online_id);
 						}
 						let userList = await this.getUserInfo(this.#aliveUserIdList)
@@ -312,7 +312,7 @@ export default class LiveChatClient {
 						let arrive_data = response_data as ArriveMessage;
 						console.debug("Message arrived: ", arrive_data.data, arrive_data.exchange);
 						let publicKey = await this.getPublicKeyById(arrive_data.exchange.from);
-						if(arrive_data.exchange.from !== arrive_data.exchange.to) {
+						if (arrive_data.exchange.from !== arrive_data.exchange.to) {
 							let [from, to] = await this.getUserInfo([arrive_data.exchange.from, arrive_data.exchange.to]) as [UserInfo, UserInfo];
 							let dataUnBoxed = this.ReceiveMessagePretreatment(receive_data, publicKey).data as ArriveMessage;
 							forwardToFront("arrive", ClientEventData.Some({
@@ -347,13 +347,13 @@ export default class LiveChatClient {
 	 * @param param 需要预处理的数据
 	 * @param receiverPublicKey 接收方的公钥
 	 */
-	private SendMessagePretreatment(param: SendMessageParameter, receiverPublicKey: string| undefined) {
+	private SendMessagePretreatment(param: SendMessageParameter, receiverPublicKey: string | undefined) {
 		let paramBoxed = param;
 
 		// 如果私钥已经生成， 则加密
-		if(this.#secretKey !== null && receiverPublicKey !== undefined) {
+		if (this.#secretKey !== null && receiverPublicKey !== undefined) {
 			let data_str = JSON.stringify(param.data);
-			const encryptedData = CryptoJS.AES.encrypt(data_str,this.GetDHKey(receiverPublicKey)).toString();
+			const encryptedData = CryptoJS.AES.encrypt(data_str, this.GetDHKey(receiverPublicKey)).toString();
 			void encryptedData;
 			paramBoxed.data = encryptedData;
 		}
@@ -365,12 +365,12 @@ export default class LiveChatClient {
 	 * @param response 需要预处理的数据
 	 * @param senderPublicKey 发送方的公钥
 	 */
-	private ReceiveMessagePretreatment(response: WSSResponse, senderPublicKey: string| undefined) {
+	private ReceiveMessagePretreatment(response: WSSResponse, senderPublicKey: string | undefined) {
 		let responseUnBoxed = response;
 		let dataUnBoxed = responseUnBoxed.data as ArriveMessage;
 
 		// 如果私钥已经生成， 则加密
-		if(this.#secretKey !== null && senderPublicKey !== undefined && typeof(dataUnBoxed.data) === 'string') {
+		if (this.#secretKey !== null && senderPublicKey !== undefined && typeof (dataUnBoxed.data) === 'string') {
 			let data_str = dataUnBoxed.data;
 			const decryptedData = CryptoJS.AES.decrypt(data_str, this.GetDHKey(senderPublicKey)).toString(CryptoJS.enc.Utf8);
 			dataUnBoxed.data = JSON.parse(decryptedData);
@@ -380,7 +380,7 @@ export default class LiveChatClient {
 		return responseUnBoxed;
 	}
 
-	async sendMessage(param: SendMessageParameter): Promise<BaseResponse| undefined> {
+	async sendMessage(param: SendMessageParameter): Promise<BaseResponse | undefined> {
 		this.handleServerEvent('receive_send', ClientEventData.Some(param))
 		let publicKey = await this.getPublicKeyById(param.exchange.to);
 		param.publickeyversion = publicKey ? SHA256(publicKey).toString() : 'None';
@@ -464,11 +464,11 @@ export default class LiveChatClient {
 					this.handleServerEvent('receive', ClientEventData.Error(`Error message type: ${typeof event.data}`));
 					return;
 			}
-			if(message.data.type==="RefreshPublickey" && message.message ==="success" && message.info ==="success"){
+			if (message.data.type === "RefreshPublickey" && message.message === "success" && message.info === "success") {
 				console.info('证书更新成功！')
 				this.#newConnect = false;
 			}
-			if(this.#newConnect){
+			if (this.#newConnect) {
 				console.info('尝试更新证书。。。')
 				this.CreateKeyPair();
 			}
@@ -507,7 +507,11 @@ export default class LiveChatClient {
 	 */
 	async getCurrentUserInfo() {
 		let res = await request.get('/api/user/userinfo') as response.UserInfoResponse
-		return res.data as response.UserInfo
+		let resdata: response.UserInfo = res.data as response.UserInfo
+		if (resdata.avatar && resdata.avatar != '') {
+			resdata.avatar = 'https://' + this.#serverUrl + resdata.avatar
+		}
+		return resdata
 	}
 
 	/**
@@ -523,7 +527,11 @@ export default class LiveChatClient {
 		}
 
 		let res = await request.post('/api/application/getusersinfo', queryBody) as response.UserInfoResponse
-		return res.data as response.UserInfo[]
+		const resdata = res.data as response.UserInfo[];
+		resdata.forEach(item => {
+			item.avatar = 'https://' + this.#serverUrl + item.avatar
+		});
+		return resdata;
 	}
 
 	/*	async initClient(loginInfo: parameter.LoginInfo) {
@@ -553,7 +561,7 @@ export default class LiveChatClient {
 		const messageUint8 = naclUtil.decodeUTF8(publicKeyBase64Hash + publicKeyBase64);
 		const signKeyPair = nacl.sign.keyPair()
 		const signature = nacl.sign.detached(messageUint8, signKeyPair.secretKey);
-		const signatureBase64 =  naclUtil.encodeBase64(signature);
+		const signatureBase64 = naclUtil.encodeBase64(signature);
 		const param = {
 			application: "Nexus",
 			type: "user",
@@ -562,7 +570,7 @@ export default class LiveChatClient {
 				type: "RefreshPublickey",
 				publickeyversion: publicKeyBase64Hash,
 				newpublickey: publicKeyBase64,
-				signPub:naclUtil.encodeBase64(signKeyPair.publicKey),
+				signPub: naclUtil.encodeBase64(signKeyPair.publicKey),
 				sign: signatureBase64
 			}
 		}
@@ -570,10 +578,10 @@ export default class LiveChatClient {
 		this.#webSocket?.send(JSON.stringify(param));
 	}
 
-	GetDHKey(_PublicKey:string){
+	GetDHKey(_PublicKey: string) {
 		assert(this.#secretKey !== null, 'Secret key is required');
 		const PublicKey = naclUtil.decodeBase64(_PublicKey)
-		const DHKey = nacl.scalarMult(this.#secretKey,PublicKey)
+		const DHKey = nacl.scalarMult(this.#secretKey, PublicKey)
 		return naclUtil.encodeBase64(DHKey)
 	}
 }
