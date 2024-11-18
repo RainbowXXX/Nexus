@@ -2,7 +2,7 @@
 	width: 100%;
 	max-width: 48rem; /* 3xl */
 	overflow: hidden;
-	border-radius: 1rem; /* xl */
+	border: none;
 	backdrop-filter: blur(10px); /* Adjust blur intensity */
 }
 
