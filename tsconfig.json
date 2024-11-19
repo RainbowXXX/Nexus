@@ -3,7 +3,11 @@
         "jsx": "react",
         "target": "es2019",
         "module": "commonjs",
-        "lib": ["dom", "es2019"],
+        "lib": [
+          "dom",
+          "es2019",
+          "es2021.weakref"
+        ],
         "experimentalDecorators": true,
         "composite": true,
         "declaration": true,

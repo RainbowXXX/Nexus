@@ -1,13 +1,13 @@
 import React, { ReactNode, useContext, useEffect, useState } from "react";
 import { SettingContext } from "@/components/Contexts/SettingsContext";
 import { closeClient, createClient, loginServer, sendMessage } from "@/helpers/chrome_heplers";
-import { serverEvent, parameter, response } from "@/services/type";
+import { parameter, response, Tools } from "@/services/type";
 import { ChatInfo, ChatInfoContext, MessageInfo } from "../ChatInfoContext";
 
+type Result = Tools.Result;
 type UserInfo = response.UserInfo;
-type LoginInfo = parameter.LoginInfo;
+type LoginInfo = parameter.LoginParameter;
 type MessageParameter = parameter.MessageParameter;
-type ClientEventData = serverEvent.ServerEventData;
 
 export default function ChatInfoProvider({ children }: { children: ReactNode }) {
 	const initialState:ChatInfo = {
@@ -34,7 +34,7 @@ export default function ChatInfoProvider({ children }: { children: ReactNode }) 
 
 	const [chatInfo, setChatInfo] = useState(initialState);
 
-	const handler = (event_type: 'login' | 'close' | 'update' | 'arrive', data: ClientEventData) => {
+	const handler = (event_type: 'login' | 'close' | 'update' | 'arrive', data: Result) => {
 		console.log('handling', event_type)
 		switch (event_type) {
 			case "login":
@@ -112,7 +112,7 @@ export default function ChatInfoProvider({ children }: { children: ReactNode }) 
 	const settings = useContext(SettingContext);
 
 	useEffect(() => {
-		return window.chromeTools.ipc.on('client', (l, r) => { handler(l, new serverEvent.ServerEventData<any>(JSON.parse(r))) });
+		return window.chromeTools.ipc.on('client', (l, r) => { handler(l, new Tools.Result<any>(r)) });
 	}, [chatInfo]);
 
 	useEffect(() => {

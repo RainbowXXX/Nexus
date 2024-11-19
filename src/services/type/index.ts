@@ -16,26 +16,33 @@ export namespace parameter {
 		"message": string,
 		"timestamp": number
 	}
-	export interface SendMessageParameter {
+	export interface LoginParameter {
+		account: string,
+		password: string,
+		application: 'Nexus',
+	}
+
+	export interface SendMessageRequest {
 		"publickeyversion": string| "None",
 
 		"type": "MessageSend",
 		"exchange": {
 			"to": number
 		},
-		"data": MessageParameter,
+		"data": MessageParameter| string,
 		"sign": string,
 	}
-	export interface PublickeyParameter {
+	export interface GetPublicKeyRequest {
 		"type": "GetPublickey",
 		"target": number
 	}
-
-    export interface LoginInfo {
-        account: string,
-        password: string,
-        application: 'Nexus',
-    }
+	export interface RefreshPublicKeyRequest {
+		"type": "RefreshPublickey",
+		"publickeyversion": "None"| string,
+		"newpublickey": string,
+		"signPub": string,
+		"sign": string
+	}
 
 	interface WSSBaseParameter {
 		"application": 'Nexus',
@@ -45,8 +52,9 @@ export namespace parameter {
 		"data": any,
 	}
 
-	export interface WSSParameter extends WSSBaseParameter {
-		"data": SendMessageParameter| string,
+	type RequestDataType = SendMessageRequest| GetPublicKeyRequest| RefreshPublicKeyRequest;
+	export interface WSSRequestParameter extends WSSBaseParameter {
+		"data": RequestDataType| string,
 	}
 }
 
@@ -68,7 +76,7 @@ export namespace response {
 		"data": parameter.MessageParameter| string,
 		"sign": string
 	}
-	export interface PublickeyMessage {
+	export interface GetPublicKeyMessage {
 		"type": "GetPublickey",
 		"target": number,
 		"version": string| undefined,
@@ -86,7 +94,9 @@ export namespace response {
 			"userid": number
 		}
 	}
-
+	export interface RefreshPublicKeyMessage{
+		"type": "RefreshPublickey"
+	}
 	export interface UserInfo {
 		"id": number,
 		"name": string,
@@ -112,22 +122,37 @@ export namespace response {
 		data: null | UserInfo | UserInfo[]
 	}
 
-	export type DataType = InitialMessage| ArriveMessage| PublickeyMessage| OnlineMessage| OfflineMessage;
+	export type DataType = InitialMessage| ArriveMessage| GetPublicKeyMessage| OnlineMessage| OfflineMessage| RefreshPublicKeyMessage;
 	export interface WSSResponse extends WSSBaseResponse {
 		"data": DataType,
 	}
 }
 
 export namespace serverEvent {
-	export type ServerEventType = 'login' | 'logout' | 'establish' | 'close' | 'terminate' | 'receive' | 'receive_send';
-	export class ServerEventData<T = any> {
-		constructor(data: any = undefined) {
+	export type ServerEventType = 'login' | 'logout' | 'establish' | 'close' | 'terminate' | 'receive';
+}
+
+export namespace Tools {
+	/**
+	 * 结果类, 如果没有错误发生, 那么返回数据, 否则返回Error
+	 */
+	export class Result<T = any> {
+		/**
+		 * 用于从纯对象(只包含数据, 不包含方法的对象) 或 JSON字符串中构造Result对象
+		 * @param data
+		 */
+		constructor(data?: {error: string}| {data: T}| string) {
 			if(data === undefined) return;
-			if(data.error) return ServerEventData.Error(data.error);
-			return ServerEventData.Some(data.data);
+			if(typeof data === 'string') {
+				data = JSON.parse(data) as {error: string}| {data: T};
+			}
+			if('error' in data) {
+				return Result.Error(data.error);
+			}
+			return Result.Some(data.data);
 		}
 
-		private static DataSome = class<T> extends ServerEventData<T> {
+		private static DataSome = class<T> extends Result<T> {
 			data: T| undefined;
 
 			constructor(data: T| undefined) {
@@ -136,7 +161,7 @@ export namespace serverEvent {
 			}
 		};
 
-		private static DataError = class<T> extends ServerEventData<T> {
+		private static DataError = class<T> extends Result<T> {
 			error: string;
 
 			constructor(error: string) {
@@ -145,16 +170,20 @@ export namespace serverEvent {
 			}
 		};
 
-		static Some<T>(data: T| undefined = undefined): ServerEventData<T> {
-			return new ServerEventData.DataSome(data);
+		static Some<T>(data: T| undefined = undefined): Result<T> {
+			return new Result.DataSome(data);
 		}
 
-		static Error(error: string): ServerEventData {
-			return new ServerEventData.DataError(error);
+		static Error(error: string): Result {
+			return new Result.DataError(error);
 		}
 
 		hasValue(): boolean {
-			return ! (this instanceof ServerEventData.DataError);
+			return ! (this instanceof Result.DataError);
+		}
+
+		hasError(): boolean {
+			return (this instanceof Result.DataError);
 		}
 
 		getData(): T | never {

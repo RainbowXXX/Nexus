@@ -10,10 +10,10 @@ import WebSocket from "ws";
 import LiveChatClient from "../../../services/LiveChatClient";
 import type { parameter } from "../../../services/type";
 
-type LoginInfo = parameter.LoginInfo;
-type WSSParameter = parameter.WSSParameter;
+type LoginInfo = parameter.LoginParameter;
+type WSSParameter = parameter.WSSRequestParameter;
 type MessageParameter = parameter.MessageParameter;
-type SendMessageParameter = parameter.SendMessageParameter;
+type SendMessageParameter = parameter.SendMessageRequest;
 
 let client: LiveChatClient | null = null;
 

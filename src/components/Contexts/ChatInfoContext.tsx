@@ -2,7 +2,7 @@ import { createContext } from "react";
 import { parameter, response } from "@/services/type";
 
 type UserInfo = response.UserInfo;
-type LoginInfo = parameter.LoginInfo;
+type LoginInfo = parameter.LoginParameter;
 type MessageParameter = parameter.MessageParameter;
 
 export interface MessageInfo {

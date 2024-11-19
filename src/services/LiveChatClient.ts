@@ -3,66 +3,28 @@ import nacl from 'tweetnacl';
 import naclUtil from 'tweetnacl-util';
 import SHA256 from 'crypto-js/sha256';
 import { ApiService } from "./request";
-import { serverEvent, parameter, response } from "./type";
+import { serverEvent, parameter, response, Tools } from "./type";
 import { mainWindow } from "../main";
 import { v4 as uuidV4 } from "uuid";
 import storage from "../extensions/storeExtension";
+import CryptoJS from "crypto-js";
 
-const CryptoJS = require('crypto-js');
+import assert from "node:assert";
+
+import Result = Tools.Result;
 
 import ClientEventType = serverEvent.ServerEventType;
-import ClientEventData = serverEvent.ServerEventData;
 import UserInfo = response.UserInfo;
 import WSSResponse = response.WSSResponse;
 import BaseResponse = response.BaseResponse;
-import PublickeyMessage = response.PublickeyMessage;
+import PublickeyMessage = response.GetPublicKeyMessage;
 import InitialMessage = response.InitialMessage;
-import WSSParameter = parameter.WSSParameter;
+import WSSRequestParameter = parameter.WSSRequestParameter;
 import ArriveMessage = response.ArriveMessage;
-import PublickeyParameter = parameter.PublickeyParameter;
-import SendMessageParameter = parameter.SendMessageParameter;
-import assert from "node:assert";
+import GetPublicKeyRequest = parameter.GetPublicKeyRequest;
+import SendMessageRequest = parameter.SendMessageRequest;
 import OnlineMessage = response.OnlineMessage;
 import OfflineMessage = response.OfflineMessage;
-
-let request: ApiService;
-
-class Queue<T> {
-	private queue: T[];
-	private resolvers: ((value: any) => void)[];
-
-	constructor() {
-		this.queue = [];
-		this.resolvers = [];
-	}
-
-	enqueue(item: T) {
-		const cur_resolve = this.resolvers.shift()
-		if (cur_resolve !== undefined) {
-			cur_resolve(item);
-		} else {
-			this.queue.push(item);
-		}
-	}
-
-	dequeue() {
-		if (this.queue.length > 0) {
-			return Promise.resolve(this.queue.shift());
-		} else {
-			return new Promise(resolve => {
-				this.resolvers.push(resolve);
-			});
-		}
-	}
-
-	isEmpty() {
-		return this.queue.length === 0;
-	}
-
-	size() {
-		return this.queue.length;
-	}
-}
 
 class AwaitableMap<Tx, Ty> {
 	private map: Map<Tx, Ty>;
@@ -126,6 +88,47 @@ class AwaitableMap<Tx, Ty> {
 	}
 }
 
+// 需要定期更新的数据
+class TimedData<T> {
+	data: T;
+	lastUpdate: number;
+	intervalHandler: number| null;
+
+	private static registry = new FinalizationRegistry(
+		(intervalHandler: number) => {
+			clearInterval(intervalHandler)
+		}
+	);
+
+	constructor(initialValue: T) {
+		this.data = initialValue;
+		this.intervalHandler = null;
+		this.lastUpdate = Date.now();
+	}
+
+	private updater(updater: (oldValue: T) => T) {
+		this.data = updater(this.data);
+		this.lastUpdate = Date.now();
+	}
+
+	autoUpdate(intervalMs: number| null, updater?: (oldValue: T) => T) {
+		if(intervalMs === null || intervalMs === undefined) {
+			if(this.intervalHandler) {
+				clearInterval(this.intervalHandler)
+				TimedData.registry.unregister(this);
+				this.intervalHandler = null;
+			}
+			return;
+		}
+		if(intervalMs <= 0) {
+			throw new Error("intervalMs must be greater than 0");
+		}
+
+		this.intervalHandler = setInterval(this.updater, intervalMs, updater);
+		TimedData.registry.register(this, this.intervalHandler);
+	}
+}
+
 export class LiveChatError extends Error {
 	constructor(message?: string) {
 		super(message);
@@ -134,279 +137,428 @@ export class LiveChatError extends Error {
 }
 
 export default class LiveChatClient {
+	readonly login_endpoint = '/api/application/login';
+
 	#serverUrl: string; // 服务器地址
 	#loginToken: string | null = null; // 登录后的令牌
-	#webSocket: WebSocket | null = null; // websocket 连接
+	#secretKey: Uint8Array | null = null; // 客户端的私钥
 
-	#aliveUserIdList: number[] = []; // 活跃用户的id
+	#request: ApiService; // HTTP(S)连接
+	#webSocket: WebSocket | null = null; // WebSocket 连接
+
+	#aliveUserIdList: Set<number> = new Set(); // 活跃用户的id
 	#curUserInfo: UserInfo | null = null; // 当前用户信息
 
-	#secretKey: Uint8Array | null = null;
+	#messageMap: AwaitableMap<string, BaseResponse> = new AwaitableMap(); // 消息列表
+	#userInfoMap: AwaitableMap<number, TimedData<UserInfo>> = new AwaitableMap(); // 用户信息
+	#publicKeyMap: AwaitableMap<number, TimedData<string| undefined>> = new AwaitableMap(); // 其他用户的公钥
 
-	#newConnect: boolean = true;
+	#keyPairPublished: boolean = false; // 公钥是否已经上传成功
 
-	#publicKeyMap: AwaitableMap<number, string | undefined> = new AwaitableMap();
+	// 回收资源的注册表
+	private static registry = new FinalizationRegistry(
+		(webSocket: WebSocket) => {
+			webSocket.close();
+		}
+	);
 
-	#messageQueue: AwaitableMap<string, BaseResponse> = new AwaitableMap(); // 消息队列 TODO(dev) 实现消息的可等待
-
+	// ------------------------------------成员函数------------------------------------
 	constructor(serverUrl: string) {
 		this.#serverUrl = serverUrl;
-		request = new ApiService(serverUrl);
+		this.#request = new ApiService(serverUrl);
+
+		this.resetClient();
 	}
 
-	async wssSend(param: WSSParameter): Promise<undefined | BaseResponse> {
-		return new Promise(async (resolve, reject) => {
-			if (this.#webSocket === null) {
-				// TODO(dev) 处理webSocket没有创建或者意外断开的情况
-				reject('WebSocket not available');
-				return;
-			}
-			this.#webSocket.send(JSON.stringify(param), (error) => {
-				if (error) {
-					reject(error);
-					return;
+	/**
+	 * 重置除了serverUrl, request, secretKey之外的其他字段
+	 */
+	resetClient(): void {
+		this.#loginToken = null;
+		this.#webSocket?.close();
+		this.#webSocket = null;
+		this.#aliveUserIdList.clear();
+		this.#curUserInfo = null;
+		this.#messageMap.clear();
+		this.#userInfoMap.clear();
+		this.#publicKeyMap.clear();
+	}
+
+	/**
+	 * 发送wss信息
+	 * @param data wss信息
+	 * @param cb 回调函数
+	 */
+	wssSendSync(data: any, cb?: ((err?: Error) => void) | undefined): Result<void> {
+		if(this.#webSocket === null) {
+			return Result.Error('WebSocket connect not available');
+		}
+		this.#webSocket.send(JSON.stringify(data), cb)
+		return Result.Some();
+	}
+
+	/**
+	 * 发送wss消息
+	 * @param data wss消息
+	 * @param timeoutMs 超时时间(ms) 当小于0时无限等待(不推荐)
+	 * @param exceptReply 为真时, 当序列号(serial)存在的时候, 期待服务器回复
+	 */
+	async wssSend(data: WSSRequestParameter, timeoutMs: number, exceptReply: boolean): Promise<Result<any>> {
+		let result_case = new Promise<Result<any>>(async (resolve, _reject) => {
+			let sendRes = this.wssSendSync(data, (error) => {
+				if(error) {
+					resolve(Result.Error(`Send WebSocket message Fail: \n${typeof error}: \n` + JSON.stringify(error)));
 				}
 			})
-			if (param.serial === undefined) resolve(undefined);
-			else {
-				resolve(await this.#messageQueue.get(param.serial));
+			if(!sendRes.hasValue()) {
+				resolve(sendRes);
+				return;
 			}
+			if ((data.serial === undefined) || (!exceptReply)) {
+				resolve(Result.Some());
+				return;
+			}
+
+			let res = await this.#messageMap.get(data.serial);
+
+			if(res === undefined) {
+				resolve(Result.Error('Wait operation canceled.'));
+				return;
+			}
+			resolve(Result.Some(res));
 		})
+		if(timeoutMs > 0) {
+			let timeout_case = new Promise<Result>((resolve, _reject) => {
+				const timeout_handler = setTimeout(() => {
+					resolve(Result.Error('Operation timeout'));
+					clearTimeout(timeout_handler);
+				}, timeoutMs);
+			})
+			return Promise.race([timeout_case, result_case])
+		}
+		return result_case;
 	}
 
-	makeWssParameter(param: any): WSSParameter {
+	/**
+	 * 从数据构造出请求体
+	 * @param data 需要发送的数据
+	 * @param serial 请求的序列号 (如果为undefined则不期望服务器回复)
+	 */
+	makeWssRequestWithData(data: any, serial: string| undefined = uuidV4().toString()): WSSRequestParameter {
 		return {
 			application: 'Nexus',
 			type: 'user',
-			serial: uuidV4().toString(),
+			serial: serial,
 			timestamp: Date.now(),
-			data: param,
+			data: data,
 		}
 	}
 
-	async getPublicKeyById(user_id: number): Promise<string | undefined> {
-		let param: PublickeyParameter = {
+	/**
+	 * 获取指定用户的公钥
+	 * @param user_id 指定用户的id
+	 * @return 返回指定用户的公钥
+	 */
+	async getPublicKeyById(user_id: number): Promise<Result<string| undefined>> {
+		let reqData: GetPublicKeyRequest = {
 			type: 'GetPublickey',
 			target: user_id,
 		}
-		let wssParam = this.makeWssParameter(param)
-		let response = await this.wssSend(wssParam);
 
-		if (response === undefined) return undefined;
-		let res = response as WSSResponse;
-		return (res.data as PublickeyMessage).publickey;
+		let wssReq = this.makeWssRequestWithData(reqData)
+		let result = await this.wssSend(wssReq, 1000, true);
+
+		if (!result.hasValue()) {
+			console.error(`Fail to get public key of user ${user_id}.`);
+			return result;
+		}
+
+		let response = result as Result<WSSResponse>;
+		let res = response.getData();
+		return Result.Some((res.data as PublickeyMessage).publickey);
+	}
+
+	/**
+	 * 转发事件到react前端
+	 * @param event_channel 事件通道
+	 * @param data 事件携带的数据
+	 */
+	private forwardEventToFront(event_channel: string, data: any): Result<void> {
+		console.debug('Forwarding', event_channel, JSON.stringify(data))
+		if(mainWindow === null) {
+			return Result.Error('Fail to forward event to front: mainWindow not available.');
+		}
+		mainWindow.webContents.send('client', event_channel, JSON.stringify(data));
+		return Result.Some();
 	}
 
 	/**
 	 * 消息处理函数
-	 * @param event_type
-	 * @param event_data
+	 * @param event_type 事件类型
+	 * @param event_data 事件所携带的数据
 	 */
-	private async handleServerEvent(event_type: ClientEventType, event_data: ClientEventData) {
-		// 将消息转发给前端
-		const forwardToFront = (event_channel: string, data: any) => {
-			console.debug('Forwarding', event_channel, JSON.stringify(data))
-			mainWindow?.webContents.send('client', event_channel, JSON.stringify(data));
-		}
-		console.debug('server event, type:', event_type, 'data:', JSON.stringify(event_data))
-
+	private async handleServerEvent(event_type: ClientEventType, event_data: Result): Promise<Result<void>> {
+		console.debug(`Receive server event:\ntype: ${event_type}\ndata: ${JSON.stringify(event_data)}`)
 		switch (event_type) {
-			case "login":
-				let login_data = event_data as ClientEventData<{ 'token': string }>;
+			case "login": {
 				// 登陆失败时通知前端
-				if (!login_data.hasValue()) {
-					let error = login_data.getError();
-					forwardToFront('login', ClientEventData.Error('Failed to login: ' + error));
-					console.error('Failed to login: ' + error);
-					return;
+				if (event_data.hasError()) {
+					console.error("Failed to login: " + event_data.getError());
+					return this.forwardEventToFront("login", event_data);
 				}
+
+				let login_data = event_data as Result<{ "token": string }>;
 
 				// 登录成功更新token和个人信息
 				this.#loginToken = login_data.getData().token;
-				request.updateToken(this.#loginToken);
+				this.#request.updateToken(this.#loginToken);
 
-				console.debug('Update curUserInfo:', this.#curUserInfo);
-				break;
-			case 'logout':
-				this.#loginToken = null;
-				this.#curUserInfo = null;
-				this.#aliveUserIdList = [];
-				forwardToFront('logout', ClientEventData.Some());
-				break;
-			case 'establish':
+				console.debug("Update curUserInfo to http(s) client:", this.#curUserInfo);
+				return Result.Some();
+			}
+			case 'logout': {
+				this.resetClient();
+				return this.forwardEventToFront("logout", Result.Some());
+			}
+			case 'establish': {
 				// 连接失败时通知前端
 				if (!event_data.hasValue()) {
 					let error = event_data.getError();
-					forwardToFront('login', ClientEventData.Error('Failed to connect to wss server: ' + error));
-					console.error('Failed to connect to wss server:' + error);
-					return;
+					console.error("Failed to connect to wss server:" + error);
+					return this.forwardEventToFront("login", event_data);
 				}
 
 				// 登录成功通知前端
-				this.#curUserInfo = await this.getCurrentUserInfo();
-				forwardToFront('login', ClientEventData.Some({ 'curUserInfo': this.#curUserInfo }));
-				break;
-			case 'close':
+				let res = this.forwardEventToFront("login", Result.Some());
+				if (res.hasError()) return res;
+
+				// 更新当前用户的信息 TODO(dev) 通知前端
+				let user_info_res = await this.getCurrentUserInfo();
+				if(user_info_res.hasError()) {
+					return user_info_res;
+				}
+				this.#curUserInfo = user_info_res.getData();
+				return Result.Some();
+			}
+			case 'close': {
 				// wss断开后通知前端
-				forwardToFront('close', ClientEventData.Some());
-				break;
-			case "terminate":
+				console.info('Wss client closed, reason:', event_data.getData());
+				return this.forwardEventToFront("close", Result.Some());
+			}
+			case "terminate": {
 				// wss异常断开后通知前端
-				let terminate_data = event_data as ClientEventData<{ 'message': string }>;
-				forwardToFront('close', ClientEventData.Error(terminate_data.getData().message));
-				break;
-			case "receive_send":
-				let receive_send_data = (event_data as ClientEventData<SendMessageParameter>).getData();
-				forwardToFront("arrive", ClientEventData.Some({
-					"message": receive_send_data.data,
-					"from": -1,
-					"to": receive_send_data.exchange.to,
-				}));
-				break;
-			case "receive":
-				// wss消息的处理
-				let receive_data = (event_data as ClientEventData<WSSResponse>).getData();
-				// 如果是一个回复消息
-				if (receive_data.serial !== undefined) {
-					this.#messageQueue.set(receive_data.serial, receive_data);
-					break;
+				return this.forwardEventToFront("close", event_data);
+			}
+			case "receive": {
+				return this.handleMessage(event_data as Result<WSSResponse>);
+			}
+			default: {
+				console.error(`Unsupported event type: ${event_type}.`);
+				return Result.Error(`Unsupported event type: ${event_type}.`);
+			}
+		}
+	}
+
+	/**
+	 * 处理其他客户端的消息
+	 * @param data 消息携带的数据
+	 */
+	private async handleMessage(data: Result<WSSResponse>): Promise<Result<void>> {
+		// wss消息的处理
+		let receive_data = data.getData();
+
+		// 如果是一个回复消息
+		if (receive_data.serial !== undefined) {
+			this.#messageMap.set(receive_data.serial, receive_data);
+			return Result.Some();
+		}
+
+		// 否则是服务器的通知
+		let response_data = receive_data.data;
+		switch (response_data.type) {
+			case 'RefreshPublickey':{
+				if(receive_data.status === 0 && receive_data.message === "success" && 'info' in receive_data && receive_data.info === "success") {
+					this.#keyPairPublished = true;
+				}
+				return Result.Some();
+			}
+			// 用户上线的消息
+			case "UserOnline": {
+				let online_data = response_data as OnlineMessage;
+				let online_id = online_data.data.userid;
+				// 如果不存在当前用户, 则把用户添加进活跃用户列表
+				if (!this.#aliveUserIdList.has(online_id)) {
+					this.#aliveUserIdList.add(online_id);
+				}
+				else {
+					console.warn('Users are added repeatedly');
 				}
 
-				// 否则是服务器的通知
-				let response_data = receive_data.data;
-				switch (response_data.type) {
-					case "UserOnline": {
-						let online_data = response_data as OnlineMessage;
-						let online_id = online_data.data.userid;
-						if (this.#aliveUserIdList.find((val) => (val === online_id)) === undefined) {
-							this.#aliveUserIdList.push(online_id);
-						}
-						let userList = await this.getUserInfo(this.#aliveUserIdList)
-						forwardToFront('update', ClientEventData.Some({ 'friends_list': userList }));
-						break;
-					}
-					case "UserOffline": {
-						let online_data = response_data as OfflineMessage;
-						let online_id = online_data.data.userid;
-						this.#aliveUserIdList = this.#aliveUserIdList.filter((val) => val !== online_id)
-						let userList = await this.getUserInfo(this.#aliveUserIdList)
-						forwardToFront('update', ClientEventData.Some({ 'friends_list': userList }));
-						break;
-					}
-					case "AliveUser": {
-						let alive_data = response_data as InitialMessage;
-						this.#aliveUserIdList = alive_data.data.aliveList;
-						console.debug("Update alive user list: ", this.#aliveUserIdList);
-						let userList = await this.getUserInfo(this.#aliveUserIdList);
-						forwardToFront("update", ClientEventData.Some({ "friends_list": userList }));
-						break;
-					}
-					case "MessageDistribution": {
-						let arrive_data = response_data as ArriveMessage;
-						console.debug("Message arrived: ", arrive_data.data, arrive_data.exchange);
-						let publicKey = await this.getPublicKeyById(arrive_data.exchange.from);
-						let dataUnBoxed = this.ReceiveMessagePretreatment(receive_data, publicKey).data as ArriveMessage;
-						forwardToFront("arrive", ClientEventData.Some({
-							"message": dataUnBoxed.data,
-							"from": arrive_data.exchange.from,
-							"to": arrive_data.exchange.to
-						}));
-						break;
-					}
-					default:
-						console.error(`Unsupported server notice type: ${response_data.type}.`)
-						break;
+				let userList = await this.getUserInfo([...this.#aliveUserIdList])
+				return this.forwardEventToFront('update', Result.Some({ 'friends_list': userList }));
+			}
+			case "UserOffline": {
+				let online_data = response_data as OfflineMessage;
+				let online_id = online_data.data.userid;
+				this.#aliveUserIdList.delete(online_id)
+				let userList = await this.getUserInfo([... this.#aliveUserIdList])
+				return this.forwardEventToFront('update', Result.Some({ 'friends_list': userList }));
+			}
+			case "AliveUser": {
+				let alive_data = response_data as InitialMessage;
+				this.#aliveUserIdList = new Set(alive_data.data.aliveList);
+				console.debug("Update alive user list: ", this.#aliveUserIdList);
+				let userList = await this.getUserInfo([... this.#aliveUserIdList]);
+				return this.forwardEventToFront("update", Result.Some({ "friends_list": userList }));
+			}
+			case "MessageDistribution": {
+				let arrive_data = response_data as ArriveMessage;
+				console.debug("Message arrived: ", arrive_data.data, arrive_data.exchange);
+
+				let use_public_key = true;
+				let public_key_res = await this.getPublicKeyById(arrive_data.exchange.from);
+				if(public_key_res.hasError()) {
+					use_public_key = false;
+					console.error(`Fail to get public key of user ${arrive_data.exchange.from}: ${public_key_res.getError()}`);
 				}
-				break;
-			default:
-				console.error(`Unsupported event type: ${event_type}.`);
-				break;
+				let public_key = public_key_res.getData();
+				let data_unboxed_res = this.ReceiveMessagePretreatment(receive_data, use_public_key ? public_key: undefined);
+				if(data_unboxed_res.hasError()) {
+					return this.forwardEventToFront("arrive", data_unboxed_res);
+				}
+
+				let data_unboxed = data_unboxed_res.getData().data as ArriveMessage;
+				return this.forwardEventToFront("arrive", Result.Some({
+					"message": data_unboxed.data,
+					"from": arrive_data.exchange.from,
+					"to": arrive_data.exchange.to
+				}));
+			}
+			default: {
+				console.error(`Unsupported server notice type: ${response_data.type}.`);
+				return Result.Error(`Unsupported server notice type: ${response_data.type}.`)
+			}
 		}
 	}
 
 	/**
 	 * 发送数据预处理: 加密和签名
 	 * @param param 需要预处理的数据
-	 * @param receiverPublicKey 接收方的公钥
+	 * @param receiverPublicKey 接收方的公钥, 如果为undefined则不加密(不推荐)
 	 */
-	private SendMessagePretreatment(param: SendMessageParameter, receiverPublicKey: string | undefined) {
-		let paramBoxed = param;
-
-		// 如果私钥已经生成， 则加密
-		if (this.#secretKey !== null && receiverPublicKey !== undefined) {
-			let data_str = JSON.stringify(param.data);
-			const encryptedData = CryptoJS.AES.encrypt(data_str, this.GetDHKey(receiverPublicKey)).toString();
-			void encryptedData;
-			paramBoxed.data = encryptedData;
+	private SendMessagePretreatment(param: SendMessageRequest, receiverPublicKey: string | undefined): Result {
+		try{
+			let paramBoxed = param;
+			// 如果私钥已经生成， 则加密
+			if (this.#secretKey !== null && receiverPublicKey !== undefined) {
+				let data_str = JSON.stringify(param.data);
+				const encryptedData = CryptoJS.AES.encrypt(data_str, this.GetDHKey(receiverPublicKey)).toString();
+				void encryptedData;
+				paramBoxed.data = encryptedData;
+			}
+			return Result.Some(paramBoxed);
 		}
-
-		return paramBoxed;
+		catch (error) {
+			if(error instanceof Error) {
+				return Result.Error(`Fail to preprocessing message: ${error.message}`);
+			}
+			return Result.Error(`Fail to preprocessing message: ${JSON.stringify(error)}`);
+		}
 	}
 	/**
-	 * 发送数据预处理: 加密和签名
+	 * 接收数据预处理: 解密并验证签名
 	 * @param response 需要预处理的数据
 	 * @param senderPublicKey 发送方的公钥
 	 */
-	private ReceiveMessagePretreatment(response: WSSResponse, senderPublicKey: string | undefined) {
+	private ReceiveMessagePretreatment(response: WSSResponse, senderPublicKey: string | undefined): Result<WSSResponse> {
 		let responseUnBoxed = response;
 		let dataUnBoxed = responseUnBoxed.data as ArriveMessage;
 
-		// 如果私钥已经生成， 则加密
-		if (this.#secretKey !== null && senderPublicKey !== undefined && typeof (dataUnBoxed.data) === 'string') {
-			let data_str = dataUnBoxed.data;
-			const decryptedData = CryptoJS.AES.decrypt(data_str, this.GetDHKey(senderPublicKey)).toString(CryptoJS.enc.Utf8);
-			dataUnBoxed.data = JSON.parse(decryptedData);
-		}
+		if(typeof (dataUnBoxed.data) === 'string') {
+			if(this.#secretKey === null) {
+				return Result.Error(`Cannot decrypt data: secret key not available`);
+			}
+			if(senderPublicKey === undefined) {
+				return Result.Error(`Cannot decrypt data: sender public key not available`);
+			}
+			try{
+				let data_str = dataUnBoxed.data;
+				const decryptedData = CryptoJS.AES.decrypt(data_str, this.GetDHKey(senderPublicKey)).toString(CryptoJS.enc.Utf8);
+				dataUnBoxed.data = JSON.parse(decryptedData);
 
-		responseUnBoxed.data = dataUnBoxed;
-		return responseUnBoxed;
+				responseUnBoxed.data = dataUnBoxed;
+				return Result.Some(responseUnBoxed);
+			}
+			catch (error) {
+				if(error instanceof Error) {
+					return Result.Error(`Fail to preprocessing message: ${error.message}`);
+				}
+				return Result.Error(`Fail to preprocessing message: ${JSON.stringify(error)}`);
+			}
+		}
+		return Result.Some(responseUnBoxed);
 	}
 
-	async sendMessage(param: SendMessageParameter): Promise<BaseResponse | undefined> {
-		this.handleServerEvent('receive_send', ClientEventData.Some(param))
-		let publicKey = await this.getPublicKeyById(param.exchange.to);
-		param.publickeyversion = publicKey ? SHA256(publicKey).toString() : 'None';
-		let tmp_param = this.SendMessagePretreatment(param, publicKey);
-		let wss_param = this.makeWssParameter(tmp_param);
-		console.debug('paramFinal:', wss_param);
-		return this.wssSend(wss_param);
+	/**
+	 * 发送消息
+	 * @param param 发送的消息
+	 * @param timeoutMs 保留字段
+	 */
+	async sendMessage(param: SendMessageRequest, timeoutMs: number = -1): Promise<Result<BaseResponse | undefined>> {
+		let public_key: string| undefined;
+		let public_key_res = await this.getPublicKeyById(param.exchange.to);
+		if(public_key_res.hasError()) {
+			public_key = undefined;
+			console.warn(`Fail to get public_key from server: ${public_key_res.getError()}`);
+		}
+		else {
+			public_key = public_key_res.getData();
+		}
+
+		param.publickeyversion = public_key ? SHA256(public_key).toString() : 'None';
+		let preprocessed_param = this.SendMessagePretreatment(param, public_key);
+		let final_param = this.makeWssRequestWithData(preprocessed_param);
+		console.debug('paramFinal:', final_param);
+		return await this.wssSend(final_param, timeoutMs,false);
 	}
 
 	/**
 	 * 登录服务器
 	 * @param loginInfo 登录信息
 	 */
-	async login(loginInfo: parameter.LoginInfo) {
-		let response = await request.post('/api/application/login', loginInfo)
+	async login(loginInfo: parameter.LoginParameter): Promise<Result<string>> {
+		let response = await this.#request.post(this.login_endpoint, loginInfo)
 
-		let login_response = await response as response.LoginResponse;
+		if(response.hasError()) {
+			return response as Result<any>;
+		}
+
+		let login_response = response.getData() as response.LoginResponse;
 		console.debug('login response: ', login_response)
 
-		const { status, message, application, token } = login_response;
-		if ((status !== 0) || (application !== 'Nexus') || (!token)) {
-			console.error(`Fail to login to server:\n${message}`)
-			this.handleServerEvent('login', ClientEventData.Error('Failed to login'));
-			return false;
+		const { message, application, token } = login_response;
+		if (application !== 'Nexus') {
+			console.error(`Fail to login to server:\nError application: ${application}`);
+			return (await this.handleServerEvent('login', Result.Error(`Fail to login to server:\nError application: ${application}`))) as Result<any>;
+		}
+		if(token === undefined) {
+			console.error(`Invalid token received from server:\n${message}`);
+			return (await this.handleServerEvent('login', Result.Error(`Invalid token received from server:\n${message}`))) as Result<any>;
 		}
 
-		// assert(login_response.token !== null && login_response.token !== undefined);
-		if (login_response.token === null) {
-			this.handleServerEvent('login', ClientEventData.Error('Invalid token received from server'));
-			return false;
-		}
-		this.handleServerEvent('login', ClientEventData.Some({ 'token': login_response.token }));
-		return true;
+		return (await this.handleServerEvent('login', Result.Some(login_response.token))) as Result<any>;
 	}
 
 	/**
 	 * 连接到wss服务器
 	 */
-	async connect() {
+	async connect(): Promise<Result<void>> {
+		const wsUrl = `wss://${this.#serverUrl}/api/wss?application=Nexus`
+
 		if (!this.#loginToken) {
 			console.error('Log in before attempting to connect.');
-			throw new LiveChatError('Log in before attempting to connect');
+			return Result.Error('Log in before attempting to connect.');
 		}
-		const wsUrl = `wss://${this.#serverUrl}/api/wss?application=Nexus`
 
 		let socket = new WebSocket(wsUrl, {
 			headers: {
@@ -417,73 +569,77 @@ export default class LiveChatClient {
 		socket.onopen = (_) => {
 			console.debug('Connected to WebSocket');
 			this.#webSocket = socket;
-			this.handleServerEvent('establish', ClientEventData.Some())
-
+			LiveChatClient.registry.register(this, socket);
+			this.handleServerEvent('establish', Result.Some())
 		}
 
 		socket.onerror = (event) => {
 			console.debug('WebSocket error.');
-			this.handleServerEvent('terminate', ClientEventData.Some({ message: event.message }));
+			this.handleServerEvent('terminate', Result.Error(event.message));
+
 			socket.close();
 			this.#webSocket = null;
+			LiveChatClient.registry.unregister(this);
 		}
 
 		socket.onclose = (event) => {
 			console.debug('WebSocket closed');
-			this.handleServerEvent('close', ClientEventData.Some({ reason: event.reason }));
+			this.handleServerEvent('close', Result.Some(event.reason));
 			this.#webSocket = null;
+			LiveChatClient.registry.unregister(this);
 		}
 
 		socket.onmessage = (event) => {
 			console.debug('Receive message', event.data);
+			if (!this.#keyPairPublished) {
+				console.info('尝试更新证书。。。')
+				this.CreateKeyPair();
+			}
+
 			let message;
 			switch (typeof event.data) {
 				case 'string':
 					message = JSON.parse(event.data);
-					break;
+					return this.handleServerEvent('receive', Result.Some(message));
 				default:
 					console.error(`Error message type: ${typeof event.data}`);
-					this.handleServerEvent('receive', ClientEventData.Error(`Error message type: ${typeof event.data}`));
+					this.handleServerEvent('receive', Result.Error(`Error message type: ${typeof event.data}`));
 					return;
 			}
-			if (message.data.type === "RefreshPublickey" && message.message === "success" && message.info === "success") {
-				console.info('证书更新成功！')
-				this.#newConnect = false;
-			}
-			if (this.#newConnect) {
-				console.info('尝试更新证书。。。')
-				this.CreateKeyPair();
-			}
-			this.handleServerEvent('receive', ClientEventData.Some(message));
 		}
+		return Result.Some();
 	}
 
-	async tryAutoLogin() {
+	async tryAutoLogin(): Promise<Result<void>> {
 		try {
 			let store = await storage.get('User') ?? '';
+			console.log(store)
 			this.#loginToken = JSON.parse(store).token;
 			if(this.#loginToken === null) {
 				console.info('Fail to auto login: no valid token found.');
-				return false;
+				return Result.Error('Fail to auto login: no valid token found.');
 			}
 			console.log('Cur token', this.#loginToken)
-			request.updateToken(this.#loginToken)
+			this.#request.updateToken(this.#loginToken)
 
 			await this.getCurrentUserInfo();
 			await this.connect();
-			return true;
+			return Result.Some();
 		}
 		catch (error) {
 			console.warn('Fail to auto login.', error);
+			if(error instanceof Error) {
+				return Result.Error(`Fail to auto login: ${error.message}.`);
+			}
+			return Result.Error(`Fail to auto login: ${JSON.stringify(error)}.`);
 		}
-		return false;
 	}
 
 	/**
 	 * 登录并连接服务器
 	 * @param loginInfo 登录信息
 	 */
-	async loginAndConnect(loginInfo: parameter.LoginInfo): Promise<boolean> {
+	async loginAndConnect(loginInfo: parameter.LoginParameter): Promise<boolean> {
 		console.debug('Start login and connected to server\n');
 		try {
 			let loginResult = await this.login(loginInfo);
@@ -508,33 +664,51 @@ export default class LiveChatClient {
 	/**
 	 * 取当前用户的用户信息
 	 */
-	async getCurrentUserInfo() {
-		let res = await request.get('/api/user/userinfo') as response.UserInfoResponse
-		let resdata: response.UserInfo = res.data as response.UserInfo
-		if (resdata.avatar && resdata.avatar != '') {
-			resdata.avatar = 'https://' + this.#serverUrl + resdata.avatar
+	async getCurrentUserInfo(): Promise<Result<UserInfo>> {
+		let get_user_info_res = await this.#request.get('/api/user/userinfo')
+
+		if(get_user_info_res.hasError()) {
+			console.error(`Fail to get cur user info from server: ${get_user_info_res.getError()}`);
+			return get_user_info_res as Result<any>;
 		}
-		return resdata
+
+		let user_info_res = get_user_info_res.getData() as response.UserInfoResponse;
+		let user_info_data: response.UserInfo = user_info_res.data as response.UserInfo
+		if (user_info_data.avatar && user_info_data.avatar != '') {
+			user_info_data.avatar = 'https://' + this.#serverUrl + user_info_data.avatar
+		}
+		return Result.Some(user_info_data);
 	}
 
 	/**
 	 * 获取好友信息
 	 * @param userId 好友列表
 	 */
-	async getUserInfo(userId: number | number[] | null) {
-		if (userId === null) return [];
+	async getUserInfo(userId: number | number[] | null): Promise<Result<UserInfo[]>> {
+		if (userId === null) {
+			return Result.Some([])
+		}
 
 		if (typeof userId === 'number') userId = [userId];
 		const queryBody = {
 			"ids": userId
 		}
 
-		let res = await request.post('/api/application/getusersinfo', queryBody) as response.UserInfoResponse
-		const resdata = res.data as response.UserInfo[];
-		resdata.forEach(item => {
+		let get_user_info_res = await this.#request.post('/api/application/getusersinfo', queryBody)
+		if(get_user_info_res.hasError()) {
+			return get_user_info_res as Result;
+		}
+
+		let user_info_res = get_user_info_res.getData() as response.UserInfoResponse
+		const user_info_date = user_info_res.data as response.UserInfo[];
+		user_info_date.forEach(item => {
 			item.avatar = 'https://' + this.#serverUrl + item.avatar
 		});
-		return resdata;
+
+		const dataMap = new Map(user_info_date.map(item => [item.id, item]));
+		const sorted_data = userId.map(id => dataMap.get(id) as UserInfo);
+
+		return Result.Some(sorted_data);
 	}
 
 	/*	async initClient(loginInfo: parameter.LoginInfo) {
@@ -555,7 +729,7 @@ export default class LiveChatClient {
 	 * //@deprecated 该函数可能在未来版本中被修改或替代。
 	 * 生成秘钥对
 	 */
-	async CreateKeyPair() {
+	async CreateKeyPair(): Promise<Result<void>> {
 		const keyPair = nacl.box.keyPair();
 		const publicKey = keyPair.publicKey;
 		const secretKey = keyPair.secretKey;
@@ -565,9 +739,10 @@ export default class LiveChatClient {
 		const signKeyPair = nacl.sign.keyPair()
 		const signature = nacl.sign.detached(messageUint8, signKeyPair.secretKey);
 		const signatureBase64 = naclUtil.encodeBase64(signature);
-		const param = {
+		const param: WSSRequestParameter = {
 			application: "Nexus",
 			type: "user",
+			serial: uuidV4().toString(),
 			timestamp: Date.now(),
 			data: {
 				type: "RefreshPublickey",
@@ -578,7 +753,7 @@ export default class LiveChatClient {
 			}
 		}
 		this.#secretKey = secretKey;
-		this.#webSocket?.send(JSON.stringify(param));
+		return this.wssSend(param, 1000, false);
 	}
 
 	GetDHKey(_PublicKey: string) {

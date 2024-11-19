@@ -1,5 +1,7 @@
-import type { localStorage } from "./type/index";
+import { localStorage, response, Tools } from "./type/index";
 import storage from "../extensions/storeExtension";
+import BaseResponse = response.BaseResponse;
+import Result = Tools.Result;
 
 export class ApiService {
     #baseURL: string;
@@ -64,12 +66,20 @@ export class ApiService {
     }
 
     // GET 方法
-    async get<T>(endpoint: string): Promise<T> {
-        return await this.request<T>(endpoint, 'GET');
+    async get(endpoint: string): Promise<Result<BaseResponse>> {
+        let get_res = await this.request<BaseResponse>(endpoint, 'GET');
+		if(get_res.status !== 0) {
+			return Result.Error(get_res.message);
+		}
+		return Result.Some(get_res);
     }
 
     // POST 方法
-    async post<T>(endpoint: string, body: unknown): Promise<T> {
-        return await this.request<T>(endpoint, 'POST', body);
+    async post(endpoint: string, body: unknown): Promise<Result<BaseResponse>> {
+        let post_res = await this.request<BaseResponse>(endpoint, 'POST', body);
+		if(post_res.status !== 0) {
+			return Result.Error(post_res.message);
+		}
+		return Result.Some(post_res);
     }
 }

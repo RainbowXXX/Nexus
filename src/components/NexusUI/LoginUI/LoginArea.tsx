@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Link } from "@tanstack/react-router";
 import { storage } from "@/helpers/store_helpers";
 
-type LoginInfo = parameter.LoginInfo;
+type LoginInfo = parameter.LoginParameter;
 
 export default function LoginArea({ loginCallback }: { loginCallback: (_: boolean) => void }) {
 	const chatInfo = useContext(ChatInfoContext);

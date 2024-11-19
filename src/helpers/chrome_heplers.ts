@@ -1,6 +1,6 @@
 import { parameter } from "@/services/type";
 
-type LoginInfo = parameter.LoginInfo;
+type LoginInfo = parameter.LoginParameter;
 type MessageParameter = parameter.MessageParameter;
 
 export async function openDevTools() {
