@@ -2,6 +2,7 @@ import { createRoute } from "@tanstack/react-router";
 import HomePage from "../pages/HomePage";
 import { RootRoute } from "./__root";
 import MainPage from "../pages/MainPage";
+import ErrorPage from "@/pages/ErrorPage";
 
 // TODO: Steps to add a new route:
 // 1. Create a new page component in the '../pages/' directory (e.g., NewPage.tsx)
@@ -27,6 +28,7 @@ export const HomeRoute = createRoute({
     path: "/",
     // component: HomePage,
     component: MainPage,
+	errorComponent: ErrorPage,
 });
 
 export const AboutRoute = createRoute({
