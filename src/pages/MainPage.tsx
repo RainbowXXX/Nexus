@@ -11,7 +11,7 @@ type UserInfo = response.UserInfo;
 
 export default function MainPage() {
 	const chatInfos = useContext(ChatInfoContext);
-	const aliveList = chatInfos.aliveUserIds;
+	const aliveList = chatInfos.aliveUserIdList;
 	const chats = chatInfos.friendsList.map((value) => {
 		return {
 			id: value.id,

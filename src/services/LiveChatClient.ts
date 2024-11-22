@@ -26,7 +26,12 @@ import SendMessageRequest = parameter.SendMessageRequest;
 import OnlineMessage = response.OnlineMessage;
 import OfflineMessage = response.OfflineMessage;
 import ClientEventType = event.ClientEventType;
-import { number } from "zod";
+import MessageParameter = parameter.MessageParameter;
+
+interface MessageInfo {
+	sender: number,
+	content: MessageParameter
+}
 
 class AwaitableMap<Tx, Ty> {
 	private map: Map<Tx, Ty>;
@@ -150,6 +155,9 @@ export default class LiveChatClient {
 
 	#keyPairPublished: boolean = false; // 公钥是否已经上传成功
 
+	#messageHistory: Map<number, MessageInfo[]> = new Map(); // 对话历史消息
+	#checkWaitingMessageMap: Map<number, Map<string, MessageInfo>> = new Map(); // 待确认的消息
+
 	// 回收资源的注册表
 	private static registry = new FinalizationRegistry(
 		(webSocket: WebSocket) => {
@@ -177,6 +185,8 @@ export default class LiveChatClient {
 		this.#messageMap.clear();
 		this.#userInfoMap.clear();
 		this.#publicKeyMap.clear();
+		this.#messageHistory.clear();
+		this.#checkWaitingMessageMap.clear();
 	}
 
 	/**
@@ -299,7 +309,7 @@ export default class LiveChatClient {
 				// 登陆失败时通知前端
 				if (event_data.hasError()) {
 					console.error("Failed to login: " + event_data.getError());
-					return this.forwardEventToFront("login", event_data);
+					return this.forwardEventToFront('login', event_data);
 				}
 
 				let login_data = event_data as Result<string>;
@@ -314,18 +324,18 @@ export default class LiveChatClient {
 			}
 			case 'logout': {
 				this.resetClient();
-				return this.forwardEventToFront("logout", Result.Some());
+				return this.forwardEventToFront('logout', Result.Some());
 			}
 			case 'establish': {
 				// 连接失败时通知前端
 				if (!event_data.hasValue()) {
 					let error = event_data.getError();
 					console.error("Failed to connect to wss server:" + error);
-					return this.forwardEventToFront("login", event_data);
+					return this.forwardEventToFront('login', event_data);
 				}
 
 				// 登录成功通知前端
-				let res = this.forwardEventToFront("login", Result.Some());
+				let res = this.forwardEventToFront('login', Result.Some());
 				if (res.hasError()) return res;
 
 				// 更新当前用户的信息 TODO(dev) 通知前端
@@ -397,7 +407,7 @@ export default class LiveChatClient {
 
 				let userList = await this.getUserInfo([...this.#aliveUserIdList])
 				if(userList.hasError()) return userList;
-				this.forwardEventToFront('update', Result.Some({ 'aliveUserIds': [...this.#aliveUserIdList] }));
+				this.forwardEventToFront('update', Result.Some({ 'aliveUserIdList': [...this.#aliveUserIdList] }));
 				return this.forwardEventToFront('update', Result.Some({ 'friendsList': userList.getData()}));
 			}
 			case "UserOffline": {
@@ -406,7 +416,7 @@ export default class LiveChatClient {
 				this.#aliveUserIdList.delete(online_id)
 				let userList = await this.getUserInfo([... this.#aliveUserIdList])
 				if(userList.hasError()) return userList;
-				this.forwardEventToFront('update', Result.Some({ 'aliveUserIds': [...this.#aliveUserIdList] }));
+				this.forwardEventToFront('update', Result.Some({ 'aliveUserIdList': [...this.#aliveUserIdList] }));
 				return this.forwardEventToFront('update', Result.Some({ 'friendsList': userList.getData() }));
 			}
 			case "AliveUser": {
@@ -415,7 +425,7 @@ export default class LiveChatClient {
 				console.debug("Update alive user list: ", this.#aliveUserIdList);
 				let userList = await this.getUserInfo([... this.#aliveUserIdList]);
 				if(userList.hasError()) return userList;
-				this.forwardEventToFront('update', Result.Some({ 'aliveUserIds': [...this.#aliveUserIdList] }));
+				this.forwardEventToFront('update', Result.Some({ 'aliveUserIdList': [...this.#aliveUserIdList] }));
 				return this.forwardEventToFront('update', Result.Some({ 'friendsList': userList.getData() }));
 			}
 			case "MessageDistribution": {
@@ -431,15 +441,47 @@ export default class LiveChatClient {
 				let public_key = public_key_res.getData();
 				let data_unboxed_res = this.ReceiveMessagePretreatment(receive_data, use_public_key ? public_key: undefined);
 				if(data_unboxed_res.hasError()) {
-					return this.forwardEventToFront('arrive', data_unboxed_res);
+					return this.forwardEventToFront('update', data_unboxed_res);
 				}
 
 				let data_unboxed = data_unboxed_res.getData().data as ArriveMessage;
-				return this.forwardEventToFront('arrive', Result.Some({
-					"message": data_unboxed.data,
-					"from": arrive_data.exchange.from,
-					"to": arrive_data.exchange.to
-				}));
+
+				let from = arrive_data.exchange.from,
+					to = arrive_data.exchange.to,
+					message = data_unboxed.data as MessageParameter;
+				// 如果是别人发过来的消息
+				if (from !== to && from !== -1) {
+					let from_id = from;
+					let new_list = this.#messageHistory.get(from_id) ?? [];
+					new_list.push({
+						sender: from_id,
+						content: message,
+					});
+					this.#messageHistory.set(from_id, new_list);
+				}
+
+				// 否则就是自己发出的消息
+				else {
+					if (from === to) {
+						let new_list = this.#messageHistory.get(-1) ?? [];
+						new_list.push({
+							sender: -1,
+							content: message,
+						});
+						this.#messageHistory.set(-1, new_list);
+					}
+					else {
+						let to_id = to;
+						let new_list = this.#messageHistory.get(to_id) ?? [];
+						new_list.push({
+							sender: -1,
+							content: message,
+						});
+						this.#messageHistory.set(to_id, new_list);
+					}
+				}
+				let transfer_message_history = [...this.#messageHistory];
+				return this.forwardEventToFront('update', Result.Some({ 'messageHistory': transfer_message_history }));
 			}
 			default: {
 				console.error(`Unsupported server notice type: ${response_data.type}.`);
@@ -533,8 +575,44 @@ export default class LiveChatClient {
 		console.debug('paramFinal:', final_param);
 		let send_res = await this.wssSend(final_param, timeoutMs,false);
 		if(send_res.hasValue()) {
-			this.forwardEventToFront('send', Result.Some({'exchange': origin_param.exchange, 'waitKey': final_param.serial, 'data': origin_param.data}))
-			this.forwardEventToFront('check', Result.Some({'exchange': origin_param.exchange, 'waitKey': final_param.serial}))
+			const to = origin_param.exchange.to, wait_key = final_param.serial, data = origin_param.data as MessageParameter;
+
+			assert(wait_key !== undefined, 'serial cannot be undefined.');
+			{
+				// 处理发送而且没有被确认的情况
+				const new_list = this.#checkWaitingMessageMap.get(to) ?? new Map<string, MessageInfo>();
+				new_list.set(wait_key, { sender: to, content: data });
+				this.#checkWaitingMessageMap.set(to, new_list);
+
+				let transfer_message_history = [...this.#messageHistory];
+				let transfer_check_waiting_message_map = [...this.#checkWaitingMessageMap].map(([key, value]) => [key, [...value]]);
+
+				this.forwardEventToFront('update', Result.Some({ 'messageHistory': transfer_message_history }));
+				this.forwardEventToFront('update', Result.Some({ 'checkWaitingMessageMap': transfer_check_waiting_message_map }));
+			}
+
+			{
+				// 处理确认后的情况
+				const new_list = this.#checkWaitingMessageMap.get(to);
+				if (new_list !== undefined) {
+					const new_message_map = this.#messageHistory;
+
+					const new_message_list = new_message_map.get(to) ?? [];
+					const data = new_list.get(wait_key) as MessageInfo;
+
+					new_message_list.push(data);
+					new_message_map.set(to, new_message_list);
+
+					new_list.delete(wait_key);
+					this.#checkWaitingMessageMap.set(to, new_list);
+				}
+
+				let transfer_message_history = [...this.#messageHistory];
+				let transfer_check_waiting_message_map = [...this.#checkWaitingMessageMap].map(([key, value]) => [key, [...value]]);
+
+				this.forwardEventToFront('update', Result.Some({ 'messageHistory': transfer_message_history }));
+				this.forwardEventToFront('update', Result.Some({ 'checkWaitingMessageMap': transfer_check_waiting_message_map }));
+			}
 		}
 		return send_res;
 	}

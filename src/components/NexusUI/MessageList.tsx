@@ -17,9 +17,9 @@ export default function MessageList({cur_friend}: {cur_friend: UserInfo| undefin
 
 	const chatInfo = useContext(ChatInfoContext);
 	let messages: MessageItemInfo[];
-	console.log(`message_list: `, chatInfo.messageList)
+	console.log(`message_list: `, chatInfo.messageHistory)
 	if(cur_friend?.id != undefined) {
-		const curMessageList = chatInfo.messageList.get(cur_friend?.id) ?? [];
+		const curMessageList = chatInfo.messageHistory.get(cur_friend?.id) ?? [];
 		messages = curMessageList.map((message, id) => {
 			let time = new Date(message.content.timestamp);
 			return {
