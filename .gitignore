@@ -102,3 +102,5 @@ out/
 /.idea
 
 data.json
+# Electron-builder
+build_dist/

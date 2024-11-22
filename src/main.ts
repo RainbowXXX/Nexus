@@ -85,13 +85,13 @@ function createWindow() {
 	// 设置APP ID, 用于在通知显示
 	app.setAppUserModelId('Nexus');
 
-	if(mainWindow){
+	if (mainWindow) {
 		monutWindowExtension(mainWindow);
 		//TODO 检查修改是否错误
 		mountStore(mainWindow);
 	}
 
-	if(inDevelopment) {
+	if (inDevelopment) {
 		mainWindow.webContents.openDevTools()
 	}
 

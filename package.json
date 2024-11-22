@@ -8,11 +8,12 @@
     "appId": "cn.nihuan.nexus",
     "productName": "Nexus",
     "directories": {
-      "output": "dist"
+      "output": "build_dist",
+      "buildResources": "assets"
     },
     "files": [
-      ".vite/build/**/*",
-      "main.js"
+      "dist/**/*",
+      ".vite/**/*"
     ],
     "win": {
       "target": "nsis"
@@ -25,7 +26,7 @@
     }
   },
   "scripts": {
-    "build": "electron-builder",
+    "build": "electron-forge make & electron-builder",
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
