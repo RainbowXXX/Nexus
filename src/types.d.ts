@@ -12,7 +12,7 @@ interface IpcType {
 }
 interface StoreObject {
 	set(key: string, value: string): Promise<void>;
-	get(key: string): Promise<string | null>;
+	get(key: string): Promise<string | undefined>;
 	remove(key: string): Promise<void>;
 	flush(): Promise<void>;
 }

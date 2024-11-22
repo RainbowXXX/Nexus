@@ -18,13 +18,15 @@ interface ChatInfo extends UserInfo{
 }
 
 interface ChatListProps {
+	aliveIds: number[];
 	chatList: ChatInfo[];
 	selectedChat: UserInfo | undefined
 	setSelectedChat: (chat: UserInfo) => void
 }
 
-export default function ChatList({ chatList, selectedChat, setSelectedChat }: ChatListProps) {
+export default function ChatList({ aliveIds, chatList, selectedChat, setSelectedChat }: ChatListProps) {
 	console.log(chatList)
+	const aliveUserIds = new Set<number>(aliveIds);
 
 	return (
 		<div className={styles.container}>
@@ -41,7 +43,7 @@ export default function ChatList({ chatList, selectedChat, setSelectedChat }: Ch
 						className={`${styles.chatItem} ${selectedChat?.id === chat.id ? styles.selectedChat : ''}`}
 						onClick={() => setSelectedChat(chat)}
 					>
-						<Avatar className={styles.avatar}>
+						<Avatar className={`${styles.avatar} ${aliveUserIds.has(chat.id)? '': 'filter grayscale'}`}>
 							<AvatarImage src={chat.avatar} alt={chat.name} />
 							<AvatarFallback>{chat.name[0]}</AvatarFallback>
 						</Avatar>

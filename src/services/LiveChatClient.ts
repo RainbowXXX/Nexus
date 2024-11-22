@@ -3,7 +3,7 @@ import nacl from 'tweetnacl';
 import naclUtil from 'tweetnacl-util';
 import SHA256 from 'crypto-js/sha256';
 import { ApiService } from "./request";
-import { serverEvent, parameter, response, Tools } from "./type";
+import { event, parameter, response, Tools } from "./type";
 import { mainWindow } from "../main";
 import { v4 as uuidV4 } from "uuid";
 import storage from "../extensions/storeExtension";
@@ -13,7 +13,7 @@ import assert from "node:assert";
 
 import Result = Tools.Result;
 
-import ClientEventType = serverEvent.ServerEventType;
+import ServerEventType = event.ServerEventType;
 import UserInfo = response.UserInfo;
 import WSSResponse = response.WSSResponse;
 import BaseResponse = response.BaseResponse;
@@ -25,6 +25,8 @@ import GetPublicKeyRequest = parameter.GetPublicKeyRequest;
 import SendMessageRequest = parameter.SendMessageRequest;
 import OnlineMessage = response.OnlineMessage;
 import OfflineMessage = response.OfflineMessage;
+import ClientEventType = event.ClientEventType;
+import { number } from "zod";
 
 class AwaitableMap<Tx, Ty> {
 	private map: Map<Tx, Ty>;
@@ -126,13 +128,6 @@ class TimedData<T> {
 
 		this.intervalHandler = setInterval(this.updater, intervalMs, updater);
 		TimedData.registry.register(this, this.intervalHandler);
-	}
-}
-
-export class LiveChatError extends Error {
-	constructor(message?: string) {
-		super(message);
-		this.name = "LiveChatError";
 	}
 }
 
@@ -283,7 +278,7 @@ export default class LiveChatClient {
 	 * @param event_channel 事件通道
 	 * @param data 事件携带的数据
 	 */
-	private forwardEventToFront(event_channel: string, data: any): Result<void> {
+	private forwardEventToFront(event_channel: ClientEventType, data: Result): Result<void> {
 		console.debug('Forwarding', event_channel, JSON.stringify(data))
 		if(mainWindow === null) {
 			return Result.Error('Fail to forward event to front: mainWindow not available.');
@@ -297,7 +292,7 @@ export default class LiveChatClient {
 	 * @param event_type 事件类型
 	 * @param event_data 事件所携带的数据
 	 */
-	private async handleServerEvent(event_type: ClientEventType, event_data: Result): Promise<Result<void>> {
+	private async handleServerEvent(event_type: ServerEventType, event_data: Result): Promise<Result<void>> {
 		console.debug(`Receive server event:\ntype: ${event_type}\ndata: ${JSON.stringify(event_data)}`)
 		switch (event_type) {
 			case "login": {
@@ -307,13 +302,14 @@ export default class LiveChatClient {
 					return this.forwardEventToFront("login", event_data);
 				}
 
-				let login_data = event_data as Result<{ "token": string }>;
+				let login_data = event_data as Result<string>;
 
 				// 登录成功更新token和个人信息
-				this.#loginToken = login_data.getData().token;
+				this.#loginToken = login_data.getData();
 				this.#request.updateToken(this.#loginToken);
 
 				console.debug("Update curUserInfo to http(s) client:", this.#curUserInfo);
+
 				return Result.Some();
 			}
 			case 'logout': {
@@ -338,6 +334,17 @@ export default class LiveChatClient {
 					return user_info_res;
 				}
 				this.#curUserInfo = user_info_res.getData();
+
+				this.getCurrentUserInfo().then((user_info) => {
+					console.debug('user_info: ', user_info)
+					if(user_info.hasError()) {
+						console.error(`Fail to get cur user info: ${user_info.getError()}`);
+					}
+					else {
+						this.forwardEventToFront('update', Result.Some({ 'curUserInfo': user_info.getData() }))
+					}
+				})
+
 				return Result.Some();
 			}
 			case 'close': {
@@ -376,12 +383,6 @@ export default class LiveChatClient {
 		// 否则是服务器的通知
 		let response_data = receive_data.data;
 		switch (response_data.type) {
-			case 'RefreshPublickey':{
-				if(receive_data.status === 0 && receive_data.message === "success" && 'info' in receive_data && receive_data.info === "success") {
-					this.#keyPairPublished = true;
-				}
-				return Result.Some();
-			}
 			// 用户上线的消息
 			case "UserOnline": {
 				let online_data = response_data as OnlineMessage;
@@ -395,21 +396,27 @@ export default class LiveChatClient {
 				}
 
 				let userList = await this.getUserInfo([...this.#aliveUserIdList])
-				return this.forwardEventToFront('update', Result.Some({ 'friends_list': userList }));
+				if(userList.hasError()) return userList;
+				this.forwardEventToFront('update', Result.Some({ 'aliveUserIds': [...this.#aliveUserIdList] }));
+				return this.forwardEventToFront('update', Result.Some({ 'friendsList': userList.getData()}));
 			}
 			case "UserOffline": {
 				let online_data = response_data as OfflineMessage;
 				let online_id = online_data.data.userid;
 				this.#aliveUserIdList.delete(online_id)
 				let userList = await this.getUserInfo([... this.#aliveUserIdList])
-				return this.forwardEventToFront('update', Result.Some({ 'friends_list': userList }));
+				if(userList.hasError()) return userList;
+				this.forwardEventToFront('update', Result.Some({ 'aliveUserIds': [...this.#aliveUserIdList] }));
+				return this.forwardEventToFront('update', Result.Some({ 'friendsList': userList.getData() }));
 			}
 			case "AliveUser": {
 				let alive_data = response_data as InitialMessage;
 				this.#aliveUserIdList = new Set(alive_data.data.aliveList);
 				console.debug("Update alive user list: ", this.#aliveUserIdList);
 				let userList = await this.getUserInfo([... this.#aliveUserIdList]);
-				return this.forwardEventToFront("update", Result.Some({ "friends_list": userList }));
+				if(userList.hasError()) return userList;
+				this.forwardEventToFront('update', Result.Some({ 'aliveUserIds': [...this.#aliveUserIdList] }));
+				return this.forwardEventToFront('update', Result.Some({ 'friendsList': userList.getData() }));
 			}
 			case "MessageDistribution": {
 				let arrive_data = response_data as ArriveMessage;
@@ -424,11 +431,11 @@ export default class LiveChatClient {
 				let public_key = public_key_res.getData();
 				let data_unboxed_res = this.ReceiveMessagePretreatment(receive_data, use_public_key ? public_key: undefined);
 				if(data_unboxed_res.hasError()) {
-					return this.forwardEventToFront("arrive", data_unboxed_res);
+					return this.forwardEventToFront('arrive', data_unboxed_res);
 				}
 
 				let data_unboxed = data_unboxed_res.getData().data as ArriveMessage;
-				return this.forwardEventToFront("arrive", Result.Some({
+				return this.forwardEventToFront('arrive', Result.Some({
 					"message": data_unboxed.data,
 					"from": arrive_data.exchange.from,
 					"to": arrive_data.exchange.to
@@ -506,6 +513,7 @@ export default class LiveChatClient {
 	 */
 	async sendMessage(param: SendMessageRequest, timeoutMs: number = -1): Promise<Result<BaseResponse | undefined>> {
 		let public_key: string| undefined;
+		const origin_param = { ...param }
 		let public_key_res = await this.getPublicKeyById(param.exchange.to);
 		if(public_key_res.hasError()) {
 			public_key = undefined;
@@ -517,9 +525,18 @@ export default class LiveChatClient {
 
 		param.publickeyversion = public_key ? SHA256(public_key).toString() : 'None';
 		let preprocessed_param = this.SendMessagePretreatment(param, public_key);
-		let final_param = this.makeWssRequestWithData(preprocessed_param);
+		if(preprocessed_param.hasError()) {
+			console.error('Fail to preprocessing message: ', preprocessed_param.getError());
+			return preprocessed_param;
+		}
+		let final_param = this.makeWssRequestWithData(preprocessed_param.getData());
 		console.debug('paramFinal:', final_param);
-		return await this.wssSend(final_param, timeoutMs,false);
+		let send_res = await this.wssSend(final_param, timeoutMs,false);
+		if(send_res.hasValue()) {
+			this.forwardEventToFront('send', Result.Some({'exchange': origin_param.exchange, 'waitKey': final_param.serial, 'data': origin_param.data}))
+			this.forwardEventToFront('check', Result.Some({'exchange': origin_param.exchange, 'waitKey': final_param.serial}))
+		}
+		return send_res;
 	}
 
 	/**
@@ -546,7 +563,7 @@ export default class LiveChatClient {
 			return (await this.handleServerEvent('login', Result.Error(`Invalid token received from server:\n${message}`))) as Result<any>;
 		}
 
-		return (await this.handleServerEvent('login', Result.Some(login_response.token))) as Result<any>;
+		return (await this.handleServerEvent('login', Result.Some(token))) as Result<any>;
 	}
 
 	/**
@@ -593,7 +610,15 @@ export default class LiveChatClient {
 			console.debug('Receive message', event.data);
 			if (!this.#keyPairPublished) {
 				console.info('尝试更新证书。。。')
-				this.CreateKeyPair();
+				this.CreateKeyPair().then((res) => {
+					if(res.hasValue()){
+						this.#keyPairPublished = true;
+					}
+					else {
+						let err = res.getError();
+						console.error(`Fail to refresh public key: ${err}`);
+					}
+				});
 			}
 
 			let message;
@@ -674,7 +699,7 @@ export default class LiveChatClient {
 
 		let user_info_res = get_user_info_res.getData() as response.UserInfoResponse;
 		let user_info_data: response.UserInfo = user_info_res.data as response.UserInfo
-		if (user_info_data.avatar && user_info_data.avatar != '') {
+		if (user_info_data.avatar && user_info_data.avatar !== '') {
 			user_info_data.avatar = 'https://' + this.#serverUrl + user_info_data.avatar
 		}
 		return Result.Some(user_info_data);
@@ -702,7 +727,9 @@ export default class LiveChatClient {
 		let user_info_res = get_user_info_res.getData() as response.UserInfoResponse
 		const user_info_date = user_info_res.data as response.UserInfo[];
 		user_info_date.forEach(item => {
-			item.avatar = 'https://' + this.#serverUrl + item.avatar
+			if(item.avatar !== null) {
+				item.avatar = 'https://' + this.#serverUrl + item.avatar
+			}
 		});
 
 		const dataMap = new Map(user_info_date.map(item => [item.id, item]));
@@ -753,7 +780,7 @@ export default class LiveChatClient {
 			}
 		}
 		this.#secretKey = secretKey;
-		return this.wssSend(param, 1000, false);
+		return this.wssSend(param, 1000, true);
 	}
 
 	GetDHKey(_PublicKey: string) {

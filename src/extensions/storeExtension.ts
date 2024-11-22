@@ -15,7 +15,7 @@ const storage: StoreObject = {
 		map[key] = value;
 		return Promise.resolve();
 	},
-	get(key: string): Promise<string | null> {
+	get(key: string): Promise<string | undefined> {
 		console.log('Get store:', key);
 		return Promise.resolve(map[key]);
 	},

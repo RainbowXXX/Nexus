@@ -11,10 +11,11 @@ export interface MessageInfo {
 }
 
 export interface ChatInfo {
-	friends_list: UserInfo[],
-	alive_user_ids: number[];
-	message_list: Map<number, MessageInfo[]>,
-	cur_user_info: UserInfo| null,
+	friendsList: UserInfo[],
+	aliveUserIds: number[];
+	messageList: Map<number, MessageInfo[]>,
+	curUserInfo: UserInfo| null,
+	checkWaitingMessageList: Map<number, Map<string, MessageInfo>>,
 
 	connected: boolean;
 
@@ -24,10 +25,11 @@ export interface ChatInfo {
 }
 
 export const ChatInfoContext = createContext<ChatInfo>({
-	friends_list: [],
-	cur_user_info: null,
-	alive_user_ids: [],
-	message_list: new Map(),
+	friendsList: [],
+	curUserInfo: null,
+	aliveUserIds: [],
+	messageList: new Map(),
+	checkWaitingMessageList: new Map(),
 	connected: false,
 	send(_message: MessageParameter, _to: number) { return Promise.resolve(); },
 	login(_: LoginInfo){ return Promise.resolve(false); },

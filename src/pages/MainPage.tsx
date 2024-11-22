@@ -11,7 +11,8 @@ type UserInfo = response.UserInfo;
 
 export default function MainPage() {
 	const chatInfos = useContext(ChatInfoContext);
-	const chats = chatInfos.friends_list.map((value) => {
+	const aliveList = chatInfos.aliveUserIds;
+	const chats = chatInfos.friendsList.map((value) => {
 		return {
 			id: value.id,
 			name: value.name,
@@ -27,7 +28,7 @@ export default function MainPage() {
 
 	useEffect(() => {
 		if(selectedChat) {
-			let res = chatInfos.friends_list.find((value) => value.id === selectedChat?.id)
+			let res = chatInfos.friendsList.find((value) => value.id === selectedChat?.id)
 			setSelectedChat(res);
 		}
 	}, [chatInfos]);
@@ -39,6 +40,7 @@ export default function MainPage() {
 			<VerticalSidebar />
 			<ChatList
 				chatList={chats}
+				aliveIds={aliveList}
 				selectedChat={selectedChat}
 				setSelectedChat={setSelectedChat}
 			/>

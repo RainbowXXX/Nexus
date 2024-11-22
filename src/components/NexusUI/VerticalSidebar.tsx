@@ -44,8 +44,8 @@ export default function VerticalSidebar() {
 					openDevTools();
 				}}
 			>
-				<AvatarImage src="/placeholder.svg?height=40&width=40" alt="User" />
-				<AvatarFallback style={{userSelect:'none'}}>U</AvatarFallback>
+				<AvatarImage src={ chatInfo.curUserInfo?.avatar ?? "/placeholder.svg?height=40&width=40" } alt="User" />
+				<AvatarFallback style={{userSelect:'none'}}> { chatInfo.curUserInfo?.name[0] ?? 'U' } </AvatarFallback>
 			</Avatar>
 			<div className={styles.spacer}></div>
 

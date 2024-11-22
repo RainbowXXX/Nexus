@@ -7,7 +7,7 @@ import {
 } from "./store-channels";
 
 const storage: StoreObject = {
-	get(key: string): Promise<string | null> {
+	get(key: string): Promise<string | undefined> {
 		return new Promise( async (resolve, _) => {
 			resolve(await ipcRenderer.invoke(STORE_GET_DATA_CHANNEL, key))
 		})

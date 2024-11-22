@@ -128,7 +128,8 @@ export namespace response {
 	}
 }
 
-export namespace serverEvent {
+export namespace event {
+	export type ClientEventType = 'login' | 'logout' | 'close' | 'update' | 'arrive' | 'send' | 'check';
 	export type ServerEventType = 'login' | 'logout' | 'establish' | 'close' | 'terminate' | 'receive';
 }
 
