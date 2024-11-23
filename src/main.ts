@@ -88,7 +88,7 @@ function createWindow() {
 	}
 
 	// 设置APP ID, 用于在通知显示
-	app.setAppUserModelId('Nexus');
+	app.setAppUserModelId('cn.nihuan.nexus');
 
 	if (mainWindow) {
 		monutWindowExtension(mainWindow);
