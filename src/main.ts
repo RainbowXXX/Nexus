@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, Tray } from "electron";
+import { app, BrowserWindow, Menu, autoUpdater, Tray, FeedURLOptions } from "electron";
 import registerListeners from "./helpers/ipc/listeners-register";
 import path from "path";
 
@@ -7,6 +7,9 @@ import { monutWindowExtension } from "./extensions/windowExtension";
 import { mountStore, unmountStore } from "./extensions/storeExtension";
 
 const inDevelopment = process.env.NODE_ENV === "development";
+const feedURL: FeedURLOptions = { url: 'https://github.com/vinciverse/Nexus/releases/download' };
+
+autoUpdater.setFeedURL(feedURL);
 
 let tray: Tray | null = null;
 let mainWindow: Electron.CrossProcessExports.BrowserWindow | null = null;
@@ -101,6 +104,33 @@ function createWindow() {
 	tray.setTitle('test tray')
 	tray.setToolTip('This is my application.')
 	tray.setContextMenu(contextMenu)
+	checkForUpdates()
+}
+
+function checkForUpdates() {
+	console.log('检查更新函数触发！');
+	autoUpdater.checkForUpdates();
+
+	autoUpdater.on('checking-for-update', () => {
+		console.log('检查更新...');
+	})
+	autoUpdater.on('update-available', () => {
+		console.log('检测到新版本');
+	});
+	autoUpdater.on('update-not-available', () => {
+		console.log('已经是最新版');
+	});
+	autoUpdater.on('before-quit-for-update', () => {
+		console.log('即将安装新版本。。。');
+	});
+	autoUpdater.on('update-downloaded', () => {
+		console.log('跟新下载完成');
+		// 当更新下载完成时，自动安装更新
+		autoUpdater.quitAndInstall();
+	});
+	autoUpdater.on('error', (error: Error) => {
+		console.error('Nexus更新系统错误:', error);
+	});
 }
 
 app.whenReady().then(createWindow);
