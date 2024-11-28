@@ -23,7 +23,8 @@
                 "./src/*"
             ]
         },
-        "outDir": "./dist",
+        "outDir": "./.vite/build",
+        "rootDir": "src",
         "moduleResolution": "node",
         "resolveJsonModule": true
     },

@@ -2,7 +2,7 @@
   "name": "nexus",
   "productName": "Nexus",
   "version": "0.2.1-alpha",
-  "description": "A chat tools",
+  "description": "Nexus",
   "main": ".vite/build/main.js",
   "build": {
     "appId": "cn.nihuan.nexus",
@@ -26,11 +26,11 @@
       }
     ],
     "files": [
-      "dist/**/*",
-      ".vite/**/*"
+      ".vite/**/*",
+      "src/**/*"
     ],
     "win": {
-      "icon": "./src/assets/images/icon",
+      "icon": "./assets/Icon.ico",
       "target": "nsis"
     },
     "mac": {
@@ -41,19 +41,12 @@
     }
   },
   "scripts": {
-    "build": "electron-forge make & electron-builder --publish=always",
-    "start": "electron-forge start",
-    "package": "electron-forge package",
-    "make": "electron-forge make",
-    "publish": "electron-forge publish",
-    "prett": "prettier . --write",
-    "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:unit": "jest",
-    "test:e2e": "playwright test",
-    "test:all": "jest && playwright test"
+    "build": "yarn make && electron-builder",
+    "build_p": "yarn make && electron-builder --publish=always",
+    "start": "yarn clean && electron-forge start",
+    "make": "yarn clean && vite build && echo 'Vite build successful!' && npx tsc",
+    "electron": "electron .",
+    "clean": "if exist .vite ( rmdir /s /q .vite )"
   },
   "author": "Nihuan Team <test@nihuan.com>",
   "license": "MIT",
@@ -89,6 +82,7 @@
     "@types/node": "^22.7.5",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.1",
+    "@types/semver": "^7.5.8",
     "autoprefixer": "^10.4.20",
     "electron": "^33.0.0",
     "electron-builder": "^25.1.8",
@@ -101,7 +95,7 @@
     "storybook": "^8.3.5",
     "tailwindcss": "^3.4.14",
     "ts-node": "^10.9.2",
-    "typescript": "^5.6.3",
+    "typescript": "^5.7.2",
     "vite": "^5.4.9"
   },
   "dependencies": {
