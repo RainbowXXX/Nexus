@@ -30,6 +30,7 @@
       ".vite/**/*"
     ],
     "win": {
+      "icon": "./src/assets/images/icon",
       "target": "nsis"
     },
     "mac": {
@@ -124,7 +125,6 @@
     "clsx": "^2.1.1",
     "crypto-js": "^4.2.0",
     "electron-log": "^5.2.3",
-    "electron-squirrel-startup": "^1.0.1",
     "electron-updater": "^6.3.9",
     "i18next": "^23.16.0",
     "lucide-react": "^0.453.0",

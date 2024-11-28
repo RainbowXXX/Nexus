@@ -54,10 +54,6 @@ const menuTemplate: (Electron.MenuItemConstructorOptions | Electron.MenuItem)[] 
 	{ label: '退出', role: 'quit' }
 ];
 
-/*if (require("electron-squirrel-startup")) {
-	app.quit();
-}*/
-
 function createWindow() {
 	const preload = path.join(__dirname, "preload.js");
 	mainWindow = new BrowserWindow({
@@ -79,7 +75,6 @@ function createWindow() {
 	registerListeners(mainWindow);
 
 	if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-		console.log(MAIN_WINDOW_VITE_DEV_SERVER_URL);
 		mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
 	} else {
 		mainWindow.loadFile(
@@ -88,7 +83,7 @@ function createWindow() {
 	}
 
 	// 设置APP ID, 用于在通知显示
-	app.setAppUserModelId('Nexus');
+	app.setAppUserModelId('cn.nihuan.nexus');
 
 	if (mainWindow) {
 		monutWindowExtension(mainWindow);

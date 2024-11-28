@@ -137,7 +137,13 @@ class TimedData<T> {
 }
 
 export default class LiveChatClient {
-	readonly login_endpoint = '/api/application/login';
+	readonly loginEndpoint = '/api/application/login';
+	readonly webSocketEndpoint = '/api/wss?application=Nexus';
+
+	readonly #useSSL: boolean; // 是否使用SSL
+
+	readonly #HTTPUrlWithPrefix: string; // HTTP(S)服务器的完整URL
+	readonly #WebsocketUrlWithPrefix: string; // web socket服务器的完整URL
 
 	#serverUrl: string; // 服务器地址
 	#loginToken: string | null = null; // 登录后的令牌
@@ -150,8 +156,8 @@ export default class LiveChatClient {
 	#curUserInfo: UserInfo | null = null; // 当前用户信息
 
 	#messageMap: AwaitableMap<string, BaseResponse> = new AwaitableMap(); // 消息列表
-	#userInfoMap: AwaitableMap<number, TimedData<UserInfo>> = new AwaitableMap(); // 用户信息
-	#publicKeyMap: AwaitableMap<number, TimedData<string| undefined>> = new AwaitableMap(); // 其他用户的公钥
+	#userInfoMap: AwaitableMap<number, TimedData<UserInfo>> = new AwaitableMap(); // 用户信息(定期更新)
+	#publicKeyMap: AwaitableMap<number, TimedData<string| undefined>> = new AwaitableMap(); // 其他用户的公钥(定期更新)
 
 	#keyPairPublished: boolean = false; // 公钥是否已经上传成功
 
@@ -166,9 +172,16 @@ export default class LiveChatClient {
 	);
 
 	// ------------------------------------成员函数------------------------------------
-	constructor(serverUrl: string) {
+	constructor(serverUrl: string, useSSL: boolean = true) {
+		this.#useSSL = useSSL;
 		this.#serverUrl = serverUrl;
-		this.#request = new ApiService(serverUrl);
+
+		void this.#serverUrl;
+
+		this.#HTTPUrlWithPrefix = `${this.#useSSL ? 'https': 'http'}://${serverUrl}`;
+		this.#WebsocketUrlWithPrefix = `${this.#useSSL ? 'wss': 'ws'}://${serverUrl}`;
+
+		this.#request = new ApiService(this.#HTTPUrlWithPrefix);
 
 		this.resetClient();
 	}
@@ -622,7 +635,7 @@ export default class LiveChatClient {
 	 * @param loginInfo 登录信息
 	 */
 	async login(loginInfo: parameter.LoginParameter): Promise<Result<string>> {
-		let response = await this.#request.post(this.login_endpoint, loginInfo)
+		let response = await this.#request.post(this.loginEndpoint, loginInfo)
 
 		if(response.hasError()) {
 			return response as Result<any>;
@@ -648,7 +661,7 @@ export default class LiveChatClient {
 	 * 连接到wss服务器
 	 */
 	async connect(): Promise<Result<void>> {
-		const wsUrl = `wss://${this.#serverUrl}/api/wss?application=Nexus`
+		const wsUrl = `${this.#WebsocketUrlWithPrefix}${this.webSocketEndpoint}`
 
 		if (!this.#loginToken) {
 			console.error('Log in before attempting to connect.');
@@ -778,7 +791,7 @@ export default class LiveChatClient {
 		let user_info_res = get_user_info_res.getData() as response.UserInfoResponse;
 		let user_info_data: response.UserInfo = user_info_res.data as response.UserInfo
 		if (user_info_data.avatar && user_info_data.avatar !== '') {
-			user_info_data.avatar = 'https://' + this.#serverUrl + user_info_data.avatar
+			user_info_data.avatar = this.#HTTPUrlWithPrefix + user_info_data.avatar
 		}
 		return Result.Some(user_info_data);
 	}
@@ -806,7 +819,7 @@ export default class LiveChatClient {
 		const user_info_date = user_info_res.data as response.UserInfo[];
 		user_info_date.forEach(item => {
 			if(item.avatar !== null) {
-				item.avatar = 'https://' + this.#serverUrl + item.avatar
+				item.avatar = this.#HTTPUrlWithPrefix + item.avatar
 			}
 		});
 
