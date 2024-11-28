@@ -54,10 +54,6 @@ const menuTemplate: (Electron.MenuItemConstructorOptions | Electron.MenuItem)[] 
 	{ label: '退出', role: 'quit' }
 ];
 
-/*if (require("electron-squirrel-startup")) {
-	app.quit();
-}*/
-
 function createWindow() {
 	const preload = path.join(__dirname, "preload.js");
 	mainWindow = new BrowserWindow({
@@ -79,7 +75,6 @@ function createWindow() {
 	registerListeners(mainWindow);
 
 	if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-		console.log(MAIN_WINDOW_VITE_DEV_SERVER_URL);
 		mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
 	} else {
 		mainWindow.loadFile(
