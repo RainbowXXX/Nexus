@@ -1,11 +1,15 @@
 import { app, BrowserWindow, Menu, Tray, FeedURLOptions } from "electron";
 import { autoUpdater } from "electron-updater"
+import log from 'electron-log';
 import registerListeners from "./helpers/ipc/listeners-register";
 import path from "path";
 
 import { DEFAULT_HEIGHT, DEFAULT_MIN_HEIGHT, DEFAULT_MIN_WIDTH, DEFAULT_WIDTH } from "./constants/SharedConstants";
 import { monutWindowExtension } from "./extensions/windowExtension";
 import { mountStore, unmountStore } from "./extensions/storeExtension";
+
+// 设置日志文件路径
+log.transports.file.resolvePath = () => path.join(app.getPath('userData'), 'app.log');
 
 const inDevelopment = process.env.NODE_ENV === "development";
 
@@ -95,7 +99,6 @@ function createWindow() {
 	if (inDevelopment) {
 		mainWindow.webContents.openDevTools()
 	}
-
 	tray = new Tray('src/assets/images/icon.ico')
 	const contextMenu = Menu.buildFromTemplate(menuTemplate)
 
@@ -106,29 +109,36 @@ function createWindow() {
 }
 
 function checkForUpdates() {
+	log.info('检查更新函数触发！');
 	console.log('检查更新函数触发！');
 	autoUpdater.checkForUpdatesAndNotify();
 
 	autoUpdater.on('checking-for-update', () => {
-		console.log('检查更新...');
+		console.log('开始检查更新...');
+		log.info('开始检查更新...');
 	})
 	autoUpdater.on('update-available', () => {
 		console.log('检测到新版本');
+		log.info('检测到新版本');
 	});
 	autoUpdater.on('update-not-available', () => {
 		console.log('已经是最新版');
+		log.info('已经是最新版');
 	});
 	autoUpdater.on('download-progress', (progressObj) => {
 		const { bytesPerSecond, percent, total, transferred } = progressObj;
 		console.log(`下载进度: ${percent}% (${transferred} / ${total} bytes)`);
+		log.info(`下载进度: ${percent}% (${transferred} / ${total} bytes)`);
 	});
 	autoUpdater.on('update-downloaded', () => {
-		console.log('跟新下载完成');
+		console.log('更新下载完成');
+		log.info('更新下载完成');
 		// 当更新下载完成时，自动安装更新
 		autoUpdater.quitAndInstall();
 	});
 	autoUpdater.on('error', (error: Error) => {
 		console.error('Nexus更新系统错误:', error);
+		log.error('Nexus更新系统错误:', error);
 	});
 }
 
