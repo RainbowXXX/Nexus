@@ -1,7 +1,7 @@
 {
   "name": "nexus",
   "productName": "Nexus",
-  "version": "0.2.1-alpha",
+  "version": "0.2.5-alpha",
   "description": "Nexus",
   "main": ".vite/build/main.js",
   "build": {
