@@ -7,6 +7,7 @@ export default defineConfig({
     plugins: [react()],
     build: {
         outDir: '.vite/renderer', // 输出目录
+        minify: 'terser',
         rollupOptions: {
             input: {
                 main: './index.html' // 入口文件
