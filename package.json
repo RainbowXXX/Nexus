@@ -42,7 +42,7 @@
   },
   "scripts": {
     "build": "yarn make && echo '应用打包...' && electron-builder && echo '任务结束!'",
-    "build_p": "yarn make && echo '应用打包并发布...' && electron-builder --publish=always && echo '任务结束!'",
+    "buildp": "yarn make && echo '应用打包并发布...' && electron-builder --publish=always && echo '任务结束!'",
     "start": "yarn clean && electron-forge start",
     "make": "yarn clean && echo '构建主函数...' && npx tsc && echo '主函数构建完成!' && yarn compress && echo '构建渲染层...' && vite build && echo '渲染层构建完成!'",
     "electron": "electron .",
