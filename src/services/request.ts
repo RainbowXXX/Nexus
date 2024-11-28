@@ -6,25 +6,13 @@ import Result = Tools.Result;
 export class ApiService {
     #baseURL: string;
     #UserToken: string | null = null;
-	#Storage_Userstring: string| null = null;
-    #Storage_User: localStorage.User | null = null;
 
-    constructor(baseURL: string) {
-        this.#baseURL = baseURL;
-		// storage.get('User').then((res) => {
-		// 	this.#Storage_Userstring = res
-		// 	if (this.#Storage_Userstring) {
-		// 		this.#Storage_User = JSON.parse(this.#Storage_Userstring)
-		// 	} else {
-		// 		this.#Storage_User = null
-		// 	}
-		// 	this.#UserToken = this.#Storage_User?.token ? this.#Storage_User.token : '';
-		// })
+    constructor(baseURLWithPrefix: string) {
+        this.#baseURL = baseURLWithPrefix;
     }
 
 	updateToken(token: string) {
 		this.#UserToken = token;
-		storage.set('User', JSON.stringify({token: token}));
 	}
 
     // 封装的 fetch 方法
@@ -47,7 +35,7 @@ export class ApiService {
         }
 
         try {
-            const response = await fetch(`https://${this.#baseURL}${endpoint}`, options);
+            const response = await fetch(`${this.#baseURL}${endpoint}`, options);
             const responseJson = await response.json();
 			console.log(responseJson)
             if (!response.ok || responseJson.status != 0) {
