@@ -99,16 +99,16 @@ function createWindow() {
 	if (inDevelopment) {
 		mainWindow.webContents.openDevTools()
 	}
+	checkForUpdates()
+
 	tray = new Tray('src/assets/images/icon.ico')
 	const contextMenu = Menu.buildFromTemplate(menuTemplate)
-
 	tray.setTitle('test tray')
 	tray.setToolTip('This is my application.')
 	tray.setContextMenu(contextMenu)
-	checkForUpdates()
 }
 
-async function checkForUpdates() {
+function checkForUpdates() {
 	log.info('检查更新函数触发！');
 	autoUpdater.on('checking-for-update', () => {
 		log.info('开始检查更新...');
@@ -132,7 +132,7 @@ async function checkForUpdates() {
 	autoUpdater.on('error', (error: Error) => {
 		log.error('Nexus更新系统错误:', error);
 	});
-	await autoUpdater.checkForUpdatesAndNotify();
+	autoUpdater.checkForUpdatesAndNotify();
 	log.info('checkForUpdatesAndNotify执行结束');
 }
 
