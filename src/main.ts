@@ -1,4 +1,5 @@
-import { app, BrowserWindow, Menu, autoUpdater, Tray, FeedURLOptions } from "electron";
+import { app, BrowserWindow, Menu, Tray, FeedURLOptions } from "electron";
+import { autoUpdater } from "electron-updater"
 import registerListeners from "./helpers/ipc/listeners-register";
 import path from "path";
 
@@ -7,9 +8,6 @@ import { monutWindowExtension } from "./extensions/windowExtension";
 import { mountStore, unmountStore } from "./extensions/storeExtension";
 
 const inDevelopment = process.env.NODE_ENV === "development";
-const feedURL: FeedURLOptions = { url: 'https://github.com/vinciverse/Nexus/releases/download' };
-
-autoUpdater.setFeedURL(feedURL);
 
 let tray: Tray | null = null;
 let mainWindow: Electron.CrossProcessExports.BrowserWindow | null = null;
@@ -109,7 +107,7 @@ function createWindow() {
 
 function checkForUpdates() {
 	console.log('检查更新函数触发！');
-	autoUpdater.checkForUpdates();
+	autoUpdater.checkForUpdatesAndNotify();
 
 	autoUpdater.on('checking-for-update', () => {
 		console.log('检查更新...');
@@ -120,8 +118,9 @@ function checkForUpdates() {
 	autoUpdater.on('update-not-available', () => {
 		console.log('已经是最新版');
 	});
-	autoUpdater.on('before-quit-for-update', () => {
-		console.log('即将安装新版本。。。');
+	autoUpdater.on('download-progress', (progressObj) => {
+		const { bytesPerSecond, percent, total, transferred } = progressObj;
+		console.log(`下载进度: ${percent}% (${transferred} / ${total} bytes)`);
 	});
 	autoUpdater.on('update-downloaded', () => {
 		console.log('跟新下载完成');
