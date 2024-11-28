@@ -11,6 +11,13 @@
       "output": "build_dist",
       "buildResources": "assets"
     },
+    "nsis": {
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "./src/assets/images/icon.ico",
+      "uninstallerIcon": "./src/assets/images/icon.ico",
+      "oneClick": false,
+      "perMachine": true
+    },
     "publish": [
       {
         "provider": "github",
