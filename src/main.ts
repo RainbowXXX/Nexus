@@ -108,15 +108,14 @@ function createWindow() {
 	checkForUpdates()
 }
 
-function checkForUpdates() {
+async function checkForUpdates() {
 	log.info('检查更新函数触发！');
-	autoUpdater.checkForUpdatesAndNotify();
-
 	autoUpdater.on('checking-for-update', () => {
 		log.info('开始检查更新...');
 	})
 	autoUpdater.on('update-available', () => {
-		log.info('检测到新版本');
+		log.info('检测到新版本,开始下载');
+		autoUpdater.downloadUpdate()
 	});
 	autoUpdater.on('update-not-available', () => {
 		log.info('已经是最新版');
@@ -133,6 +132,8 @@ function checkForUpdates() {
 	autoUpdater.on('error', (error: Error) => {
 		log.error('Nexus更新系统错误:', error);
 	});
+	await autoUpdater.checkForUpdatesAndNotify();
+	log.info('checkForUpdatesAndNotify执行结束');
 }
 
 app.whenReady().then(createWindow);
