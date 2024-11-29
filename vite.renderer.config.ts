@@ -20,9 +20,11 @@ export default defineConfig((env) => {
         plugins: [pluginExposeRenderer(name), react()],
         resolve: {
             preserveSymlinks: true,
-            alias: {
-                "@": path.resolve(__dirname, "./src"),
-            },
+			alias: {
+				"@": path.resolve(__dirname, "./src/renderer"),
+				"@main": path.resolve(__dirname, "./src/main"),
+				"@src": path.resolve(__dirname, "./src"),
+			},
         },
         clearScreen: false,
     } as UserConfig;

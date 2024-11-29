@@ -20,15 +20,23 @@
         "baseUrl": ".",
         "paths": {
             "@/*": [
-                "./src/*"
-            ]
+                "./src/renderer/*"
+            ],
+			"@main/*": [
+			  "src/main/*"
+			],
+			"@src/*": [
+			  "src/*"
+			]
         },
         "outDir": "./.vite/build",
         "rootDir": "src",
         "moduleResolution": "node",
-        "resolveJsonModule": true
+        "resolveJsonModule": true,
+	  	"typeRoots": ["src/types", "node_modules/@types", "."],
     },
     "include": [
-        "src/**/*"
+        "src/**/*",
+	  	"*.ts"
     ],
 }

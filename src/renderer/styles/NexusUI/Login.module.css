@@ -1,0 +1,79 @@
+.card {
+	width: 100%;
+	max-width: 48rem; /* 3xl */
+	overflow: hidden;
+	border: none;
+	backdrop-filter: blur(10px); /* Adjust blur intensity */
+}
+
+.grid {
+	display: grid;
+	grid-template-columns: 1fr;
+}
+
+@media (min-width: 1024px) {
+	.grid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+.innerDiv {
+	padding: 2rem; /* 8 */
+}
+
+.formContainer {
+	margin: 0 auto;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 1.5rem; /* 6 */
+	width: 100%;
+	max-width: 21.875rem; /* 350px */
+}
+
+.header {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.5rem; /* 2 */
+}
+
+.title {
+	font-size: 1.5rem; /* 2xl */
+	font-weight: 600; /* semi-bold */
+	letter-spacing: -0.01em;
+	color: var(--primary);
+}
+
+.form {
+	display: grid;
+	gap: 1rem; /* 4 */
+}
+
+.inputGroup {
+	display: grid;
+	gap: 0.5rem; /* 2 */
+}
+
+.rememberSection {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.checkboxGroup {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem; /* 2 */
+}
+
+.checkboxLabel {
+	font-size: 0.875rem; /* sm */
+	font-weight: 500; /* medium */
+	opacity: 0.9;
+}
+
+.forgotPassword {
+	font-size: 0.875rem; /* sm */
+	color: deepskyblue;
+}
