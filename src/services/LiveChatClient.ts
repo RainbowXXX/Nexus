@@ -597,11 +597,11 @@ export default class LiveChatClient {
 				new_list.set(wait_key, { sender: -1, content: data });
 				this.#checkWaitingMessageMap.set(to, new_list);
 
-				let transfer_message_history = [...this.#messageHistory];
-				let transfer_check_waiting_message_map = [...this.#checkWaitingMessageMap].map(([key, value]) => [key, [...value]]);
-
-				this.forwardEventToFront('update', Result.Some({ 'messageHistory': transfer_message_history }));
-				this.forwardEventToFront('update', Result.Some({ 'checkWaitingMessageMap': transfer_check_waiting_message_map }));
+				// let transfer_message_history = [...this.#messageHistory];
+				// let transfer_check_waiting_message_map = [...this.#checkWaitingMessageMap].map(([key, value]) => [key, [...value]]);
+				//
+				// this.forwardEventToFront('update', Result.Some({ 'messageHistory': transfer_message_history }));
+				// this.forwardEventToFront('update', Result.Some({ 'checkWaitingMessageMap': transfer_check_waiting_message_map }));
 			}
 
 			{
@@ -614,10 +614,10 @@ export default class LiveChatClient {
 					const data = new_list.get(wait_key) as MessageInfo;
 
 					new_message_list.push(data);
-					new_message_map.set(to, new_message_list);
 
 					new_list.delete(wait_key);
 					this.#checkWaitingMessageMap.set(to, new_list);
+					this.#messageHistory.set(to, new_message_list);
 				}
 
 				let transfer_message_history = [...this.#messageHistory];

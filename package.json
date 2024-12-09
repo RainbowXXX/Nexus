@@ -10,12 +10,12 @@
     "directories": {
       "output": "build_dist",
       "buildResources": "assets"
-    },
-    "compression": "maximum",
-    "nsis": {
-      "allowToChangeInstallationDirectory": true,
-      "installerIcon": "./src/assets/images/icon.ico",
-      "uninstallerIcon": "./src/assets/images/icon.ico",
+	},
+	"compression": "maximum",
+	"nsis": {
+	  "allowToChangeInstallationDirectory": true,
+	  "installerIcon": "./src/assets/images/icon.ico",
+	  "uninstallerIcon": "./src/assets/images/icon.ico",
       "oneClick": false,
       "perMachine": true
     },
