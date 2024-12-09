@@ -594,7 +594,7 @@ export default class LiveChatClient {
 			{
 				// 处理发送而且没有被确认的情况
 				const new_list = this.#checkWaitingMessageMap.get(to) ?? new Map<string, MessageInfo>();
-				new_list.set(wait_key, { sender: to, content: data });
+				new_list.set(wait_key, { sender: -1, content: data });
 				this.#checkWaitingMessageMap.set(to, new_list);
 
 				let transfer_message_history = [...this.#messageHistory];
