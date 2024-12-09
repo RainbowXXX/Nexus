@@ -3,7 +3,7 @@
   "productName": "Nexus",
   "version": "0.2.5-alpha",
   "description": "Nexus",
-  "main": ".vite/build/main.js",
+  "main": ".vite/build/nexus.js",
   "build": {
     "appId": "cn.nihuan.nexus",
     "productName": "Nexus",

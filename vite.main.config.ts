@@ -1,38 +1,199 @@
-import type { ConfigEnv, UserConfig } from "vite";
-import { defineConfig, mergeConfig } from "vite";
-import { external, getBuildConfig, getBuildDefine, pluginHotRestart } from "./vite.base.config";
-import path from "path";
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { resolve } from 'path';
 
-// https://vitejs.dev/config
-export default defineConfig((env) => {
-    // @ts-ignore
-	const forgeEnv = env as ConfigEnv<"build">;
-    const { forgeConfigSelf } = forgeEnv;
-    const define = getBuildDefine(forgeEnv);
-    const config: UserConfig = {
-        build: {
-            lib: {
-                entry: forgeConfigSelf.entry!,
-                fileName: () => "[name].js",
-                formats: ["cjs"],
-            },
-            rollupOptions: {
-                external,
-            },
-        },
-        plugins: [pluginHotRestart("restart")],
-        define,
-        resolve: {
-			preserveSymlinks: true,
-			alias: {
-				"@": path.resolve(__dirname, "./src/renderer"),
-				"@main": path.resolve(__dirname, "./src/main"),
-				"@src": path.resolve(__dirname, "./src"),
-			},
-            // Load the Node.js entry.
-            mainFields: ["module", "jsnext:main", "jsnext"],
-        },
-    };
-
-    return mergeConfig(getBuildConfig(forgeEnv), config);
+export default defineConfig(({ command, mode }) => {
+	return {
+		root: __dirname,
+		mode: mode,
+		build: {
+		  emptyOutDir: false,
+		  outDir: ".vite/build",
+		  watch: {},
+		  minify: false,
+		  lib: {
+			entry: "src/main/main.ts",
+			formats: [
+			  "cjs"
+			]
+		  },
+		  rollupOptions: {
+			external: [
+			  "electron",
+			  "_http_agent",
+			  "node:_http_agent",
+			  "_http_client",
+			  "node:_http_client",
+			  "_http_common",
+			  "node:_http_common",
+			  "_http_incoming",
+			  "node:_http_incoming",
+			  "_http_outgoing",
+			  "node:_http_outgoing",
+			  "_http_server",
+			  "node:_http_server",
+			  "_stream_duplex",
+			  "node:_stream_duplex",
+			  "_stream_passthrough",
+			  "node:_stream_passthrough",
+			  "_stream_readable",
+			  "node:_stream_readable",
+			  "_stream_transform",
+			  "node:_stream_transform",
+			  "_stream_wrap",
+			  "node:_stream_wrap",
+			  "_stream_writable",
+			  "node:_stream_writable",
+			  "_tls_common",
+			  "node:_tls_common",
+			  "_tls_wrap",
+			  "node:_tls_wrap",
+			  "assert",
+			  "node:assert",
+			  "assert/strict",
+			  "node:assert/strict",
+			  "async_hooks",
+			  "node:async_hooks",
+			  "buffer",
+			  "node:buffer",
+			  "child_process",
+			  "node:child_process",
+			  "cluster",
+			  "node:cluster",
+			  "console",
+			  "node:console",
+			  "constants",
+			  "node:constants",
+			  "crypto",
+			  "node:crypto",
+			  "dgram",
+			  "node:dgram",
+			  "diagnostics_channel",
+			  "node:diagnostics_channel",
+			  "dns",
+			  "node:dns",
+			  "dns/promises",
+			  "node:dns/promises",
+			  "domain",
+			  "node:domain",
+			  "events",
+			  "node:events",
+			  "fs",
+			  "node:fs",
+			  "fs/promises",
+			  "node:fs/promises",
+			  "http",
+			  "node:http",
+			  "http2",
+			  "node:http2",
+			  "https",
+			  "node:https",
+			  "inspector",
+			  "node:inspector",
+			  "inspector/promises",
+			  "node:inspector/promises",
+			  "module",
+			  "node:module",
+			  "net",
+			  "node:net",
+			  "os",
+			  "node:os",
+			  "path",
+			  "node:path",
+			  "path/posix",
+			  "node:path/posix",
+			  "path/win32",
+			  "node:path/win32",
+			  "perf_hooks",
+			  "node:perf_hooks",
+			  "process",
+			  "node:process",
+			  "punycode",
+			  "node:punycode",
+			  "querystring",
+			  "node:querystring",
+			  "readline",
+			  "node:readline",
+			  "readline/promises",
+			  "node:readline/promises",
+			  "repl",
+			  "node:repl",
+			  "stream",
+			  "node:stream",
+			  "stream/consumers",
+			  "node:stream/consumers",
+			  "stream/promises",
+			  "node:stream/promises",
+			  "stream/web",
+			  "node:stream/web",
+			  "string_decoder",
+			  "node:string_decoder",
+			  "sys",
+			  "node:sys",
+			  "timers",
+			  "node:timers",
+			  "timers/promises",
+			  "node:timers/promises",
+			  "tls",
+			  "node:tls",
+			  "trace_events",
+			  "node:trace_events",
+			  "tty",
+			  "node:tty",
+			  "url",
+			  "node:url",
+			  "util",
+			  "node:util",
+			  "util/types",
+			  "node:util/types",
+			  "v8",
+			  "node:v8",
+			  "vm",
+			  "node:vm",
+			  "wasi",
+			  "node:wasi",
+			  "worker_threads",
+			  "node:worker_threads",
+			  "zlib",
+			  "node:zlib",
+			  "@radix-ui/react-avatar",
+			  "@radix-ui/react-scroll-area",
+			  "@radix-ui/react-slot",
+			  "@radix-ui/react-toggle",
+			  "@radix-ui/react-toggle-group",
+			  "@tanstack/react-router",
+			  "@tanstack/router-devtools",
+			  "@vitejs/plugin-react",
+			  "class-variance-authority",
+			  "clsx",
+			  "electron-squirrel-startup",
+			  "i18next",
+			  "lucide-react",
+			  "react",
+			  "react-dom",
+			  "react-i18next",
+			  "react-query",
+			  "tailwind-merge",
+			  "tailwindcss-animate",
+			  "zod"
+			]
+		  }
+		},
+		clearScreen: false,
+		plugins: [
+		  {
+			name: "@electron-forge/plugin-vite:hot-restart"
+		  }
+		],
+		define: {
+		  "MAIN_WINDOW_VITE_DEV_SERVER_URL": "\"http://localhost:5173/\""
+		},
+		resolve: {
+		  mainFields: [
+			"module",
+			"jsnext:main",
+			"jsnext"
+		  ]
+		}
+	  };
 });

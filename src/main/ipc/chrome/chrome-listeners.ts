@@ -8,7 +8,6 @@ import {
 import assert from "node:assert";
 import WebSocket from "ws";
 import LiveChatClient from "../../services/LiveChatClient";
-import type { parameter } from "../../services/type";
 
 type LoginInfo = parameter.LoginParameter;
 type WSSParameter = parameter.WSSRequestParameter;

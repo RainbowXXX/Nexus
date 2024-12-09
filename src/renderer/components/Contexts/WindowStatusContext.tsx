@@ -1,6 +1,6 @@
 import { createContext } from "react";
 
-import { DEFAULT_HEIGHT, DEFAULT_WIDTH } from "@src/constants/SharedConstants";
+import { DEFAULT_HEIGHT, DEFAULT_WIDTH } from "../../../constants/SharedConstants";
 
 export const defaultVal: WindowStatus = {
 	size: {height: DEFAULT_HEIGHT, width: DEFAULT_WIDTH },

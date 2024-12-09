@@ -3,10 +3,10 @@ import log from 'electron-log/main';
 import { autoUpdater } from "electron-updater"
 import { app, BrowserWindow, Menu, Tray } from "electron";
 
-import registerListeners from "@main/ipc/listeners-register";
-import { monutWindowExtension } from "@main/extensions/windowExtension";
-import { mountStore, unmountStore } from "@main/extensions/storeExtension";
-import { DEFAULT_HEIGHT, DEFAULT_MIN_HEIGHT, DEFAULT_MIN_WIDTH, DEFAULT_WIDTH } from "@src/constants/SharedConstants";
+import registerListeners from "./ipc/listeners-register";
+import { monutWindowExtension } from "./extensions/windowExtension";
+import { mountStore, unmountStore } from "./extensions/storeExtension";
+import { DEFAULT_HEIGHT, DEFAULT_MIN_HEIGHT, DEFAULT_MIN_WIDTH, DEFAULT_WIDTH } from "../constants/SharedConstants";
 
 log.initialize()
 log.info('应用启动');
@@ -74,19 +74,12 @@ function createWindow() {
 	});
 	registerListeners(mainWindow);
 
-	if (inDevelopment) {
-		log.log(`inDevelopment: ${inDevelopment}`)
-		if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-			mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
-			log.log(`MAIN_WINDOW_VITE_DEV_SERVER_URL: ${MAIN_WINDOW_VITE_DEV_SERVER_URL}`)
-		} else {
-			mainWindow.loadFile(
-				path.join(__dirname, `../renderer/index.html`)
-			);
-		}
+	if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+		mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
+		log.log(`MAIN_WINDOW_VITE_DEV_SERVER_URL: ${MAIN_WINDOW_VITE_DEV_SERVER_URL}`)
 	} else {
 		mainWindow.loadFile(
-			path.join(__dirname, `../renderer/index.html`)
+			path.join(__dirname, `../renderer/main_window/index.html`)
 		);
 	}
 
@@ -99,9 +92,9 @@ function createWindow() {
 		mountStore(mainWindow);
 	}
 
-	if (inDevelopment) {
-		mainWindow.webContents.openDevTools()
-	}
+	// if (inDevelopment) {
+	// 	mainWindow.webContents.openDevTools()
+	// }
 	checkForUpdates()
 
 	tray = new Tray('src/assets/images/icon.ico')

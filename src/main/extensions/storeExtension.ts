@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import { BrowserWindow } from "electron";
-import { DEFAULT_DATA_FILE } from "@src/constants/SharedConstants";
+import { DEFAULT_DATA_FILE } from "../../constants/SharedConstants";
 
 type StoreItem = {
 	[key: string]: string;
