@@ -6,7 +6,7 @@ import { app, BrowserWindow, Menu, Tray } from "electron";
 import registerListeners from "./ipc/listeners-register";
 import { monutWindowExtension } from "./extensions/windowExtension";
 import { mountStore, unmountStore } from "./extensions/storeExtension";
-import { DEFAULT_HEIGHT, DEFAULT_MIN_HEIGHT, DEFAULT_MIN_WIDTH, DEFAULT_WIDTH } from "../constants/SharedConstants";
+import { DEFAULT_HEIGHT, DEFAULT_MIN_HEIGHT, DEFAULT_MIN_WIDTH, DEFAULT_WIDTH } from "../lib/constants";
 
 log.initialize()
 log.info('应用启动');
