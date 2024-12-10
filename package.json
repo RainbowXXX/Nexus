@@ -51,7 +51,8 @@
     "prepackage": "rimraf build_dist && yarn build",
     "publish": "electron-builder --publish=always",
 	"start": "electron-forge start",
-	"dev": "electron ."
+	"dev": "electron .",
+	"predev": "yarn build"
   },
   "author": "Nihuan Team <test@nihuan.com>",
   "license": "MIT",
