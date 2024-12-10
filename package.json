@@ -3,19 +3,19 @@
   "productName": "Nexus",
   "version": "0.2.5-alpha",
   "description": "Nexus",
-  "main": ".vite/build/nexus.js",
+  "main": ".vite/build/main.js",
   "build": {
     "appId": "cn.nihuan.nexus",
     "productName": "Nexus",
     "directories": {
       "output": "build_dist",
       "buildResources": "assets"
-	},
+    },
 	"compression": "maximum",
-	"nsis": {
-	  "allowToChangeInstallationDirectory": true,
-	  "installerIcon": "./src/assets/images/icon.ico",
-	  "uninstallerIcon": "./src/assets/images/icon.ico",
+    "nsis": {
+      "allowToChangeInstallationDirectory": true,
+	  "installerIcon": "./assets/images/icon.ico",
+	  "uninstallerIcon": "./assets/images/icon.ico",
       "oneClick": false,
       "perMachine": true
     },
@@ -41,13 +41,16 @@
     }
   },
   "scripts": {
-    "build": "yarn make && echo '应用打包...' && electron-builder && echo '任务结束!'",
-    "buildp": "yarn make && echo '应用打包并发布...' && electron-builder --publish=always && echo '任务结束!'",
-    "start": "yarn clean && electron-forge start",
-    "make": "yarn clean && echo '构建主函数...' && npx tsc && echo '主函数构建完成!' && yarn compress && echo '构建渲染层...' && vite build && echo '渲染层构建完成!'",
-    "electron": "electron .",
-    "clean": "echo '删除缓存' && if exist .vite ( rmdir /s /q .vite )",
-    "compress": "echo '压缩主函数...' && node testTerser.js && echo '压缩完成!'"
+    "build": "yarn build:main && yarn build:preload && yarn build:renderer",
+    "build:main": "vite build -c vite.main.config.ts",
+    "build:preload": "vite build -c vite.preload.config.ts",
+    "build:renderer": "vite build -c vite.config.ts",
+    "prebuild": "rimraf .vite",
+    "postbuild": "node testTerser.js",
+    "package": "electron-builder",
+    "prepackage": "rimraf build_dist && yarn build",
+    "publish": "electron-builder --publish=always",
+    "dev": "electron-forge start"
   },
   "author": "Nihuan Team <test@nihuan.com>",
   "license": "MIT",
@@ -128,6 +131,7 @@
     "react-dom": "^18.3.1",
     "react-i18next": "^15.0.3",
     "react-query": "^3.39.3",
+    "rimraf": "^6.0.1",
     "sass": "^1.80.3",
     "socket.io-client": "^4.8.1",
     "sqlite3": "^5.1.7",

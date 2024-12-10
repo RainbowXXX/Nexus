@@ -7,6 +7,7 @@ import { mainWindow } from "../main";
 import { v4 as uuidV4 } from "uuid";
 import storage from "../extensions/storeExtension";
 import CryptoJS from "crypto-js";
+import Result from "../../lib/utils";
 
 import assert from "node:assert";
 

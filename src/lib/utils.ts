@@ -1,7 +1,7 @@
 /**
  * 结果类, 如果没有错误发生, 那么返回数据, 否则返回Error
  */
-class Result<T = any> {
+export default class Result<T = any> {
 	/**
 	 * 用于从纯对象(只包含数据, 不包含方法的对象) 或 JSON字符串中构造Result对象
 	 * @param data

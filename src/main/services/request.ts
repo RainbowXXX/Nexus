@@ -1,4 +1,6 @@
 import storage from "../extensions/storeExtension";
+import Result from "../../lib/utils";
+
 import BaseResponse = response.BaseResponse;
 
 export class ApiService {

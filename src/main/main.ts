@@ -70,7 +70,7 @@ function createWindow() {
 			preload: preload,
 		},
 		titleBarStyle: "hidden",
-		icon: 'src/assets/images/icon.ico',
+		icon: 'assets/images/icon.ico',
 	});
 	registerListeners(mainWindow);
 
@@ -79,7 +79,7 @@ function createWindow() {
 		log.log(`MAIN_WINDOW_VITE_DEV_SERVER_URL: ${MAIN_WINDOW_VITE_DEV_SERVER_URL}`)
 	} else {
 		mainWindow.loadFile(
-			path.join(__dirname, `../renderer/main_window/index.html`)
+			path.join(__dirname, `../renderer/index.html`)
 		);
 	}
 
@@ -97,7 +97,7 @@ function createWindow() {
 	// }
 	checkForUpdates()
 
-	tray = new Tray('src/assets/images/icon.ico')
+	tray = new Tray('assets/images/icon.ico')
 	const contextMenu = Menu.buildFromTemplate(menuTemplate)
 	tray.setTitle('test tray')
 	tray.setToolTip('This is my application.')

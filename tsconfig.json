@@ -21,15 +21,10 @@
         "paths": {
             "@/*": [
                 "./src/renderer/*"
-            ],
-			"@main/*": [
-			  "src/main/*"
-			],
-			"@src/*": [
-			  "src/*"
-			]
+            ]
         },
         "outDir": "./.vite/build",
+	  	"outFile": ".vite/build/main.js",
         "rootDir": "src",
         "moduleResolution": "node",
         "resolveJsonModule": true,

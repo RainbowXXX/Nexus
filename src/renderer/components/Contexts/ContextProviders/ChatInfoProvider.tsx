@@ -3,6 +3,8 @@ import { SettingContext } from "@/components/Contexts/SettingsContext";
 import { closeClient, createClient, loginServer, sendMessage } from "@/helpers/chrome_heplers";
 import { ChatInfo, ChatInfoContext, MessageInfo } from "../ChatInfoContext";
 
+import Result from "../../../../lib/utils";
+
 type ClientEventType = event.ClientEventType;
 type LoginParameter = parameter.LoginParameter;
 type MessageParameter = parameter.MessageParameter;
