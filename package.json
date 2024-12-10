@@ -50,7 +50,8 @@
     "package": "electron-builder",
     "prepackage": "rimraf build_dist && yarn build",
     "publish": "electron-builder --publish=always",
-    "dev": "electron-forge start"
+	"start": "electron-forge start",
+	"dev": "electron ."
   },
   "author": "Nihuan Team <test@nihuan.com>",
   "license": "MIT",
@@ -100,7 +101,8 @@
     "tailwindcss": "^3.4.14",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.2",
-    "vite": "^5.4.9"
+    "vite": "^5.4.9",
+	"rimraf": "^6.0.1"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.1",
@@ -131,7 +133,6 @@
     "react-dom": "^18.3.1",
     "react-i18next": "^15.0.3",
     "react-query": "^3.39.3",
-    "rimraf": "^6.0.1",
     "sass": "^1.80.3",
     "socket.io-client": "^4.8.1",
     "sqlite3": "^5.1.7",
