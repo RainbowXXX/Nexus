@@ -7,18 +7,13 @@
   "build": {
     "appId": "cn.nihuan.nexus",
     "productName": "Nexus",
+    "files": [
+      ".vite/**/*"
+    ],
     "directories": {
-      "output": "build_dist",
-      "buildResources": "./assets"
+      "output": "build_dist"
     },
     "compression": "maximum",
-    "nsis": {
-      "allowToChangeInstallationDirectory": true,
-      "installerIcon": "./assets/images/icon.ico",
-      "uninstallerIcon": "./assets/images/icon.ico",
-      "oneClick": false,
-      "perMachine": true
-    },
     "publish": [
       {
         "provider": "github",
@@ -26,9 +21,13 @@
         "repo": "Nexus"
       }
     ],
-    "files": [
-      ".vite/**/*"
-    ],
+    "nsis": {
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "./assets/images/icon.ico",
+      "uninstallerIcon": "./assets/images/icon.ico",
+      "oneClick": false,
+      "perMachine": true
+    },
     "win": {
       "icon": "./assets/Icon.ico",
       "target": "nsis"
@@ -41,7 +40,7 @@
     }
   },
   "scripts": {
-    "build": "yarn build:main && yarn build:preload && yarn build:renderer",
+    "build": "yarn build:renderer && yarn build:main && yarn build:preload",
     "build:main": "vite build -c vite.main.config.ts",
     "build:preload": "vite build -c vite.preload.config.ts",
     "build:renderer": "vite build -c vite.config.ts",

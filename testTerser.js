@@ -2,8 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const Terser = require('terser');
 
-const buildDir = '.vite/build';
-const outputDir = '.vite/build';
+const buildDir = '.vite';
+const outputDir = '.vite';
 
 // 确保输出目录存在
 if (!fs.existsSync(outputDir)) {
