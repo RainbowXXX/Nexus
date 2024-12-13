@@ -24,11 +24,13 @@
             ]
         },
         "outDir": "./.vite/build",
-	  	"outFile": ".vite/build/main.js",
         "rootDir": "src",
         "moduleResolution": "node",
         "resolveJsonModule": true,
-	  	"typeRoots": ["src/types", "node_modules/@types"],
+        "typeRoots": [
+            "src/types",
+            "node_modules/@types"
+        ],
     },
     "include": [
         "src/**/*"
