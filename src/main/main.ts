@@ -71,7 +71,19 @@ function createWindow() {
 		},
 		titleBarStyle: "hidden",
 		icon: 'assets/images/icon.ico',
+		...(process.platform !== 'darwin' ? {
+			titleBarOverlay: true
+		} : {})
 	});
+
+	if(process.platform !== 'darwin') {
+		mainWindow.setTitleBarOverlay({
+			color: 'black',
+			symbolColor: 'white'
+		})
+	}
+	mainWindow.setMenuBarVisibility(false)
+
 	registerListeners(mainWindow);
 
 	if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
@@ -79,7 +91,7 @@ function createWindow() {
 		log.log(`MAIN_WINDOW_VITE_DEV_SERVER_URL: ${MAIN_WINDOW_VITE_DEV_SERVER_URL}`)
 	} else {
 		mainWindow.loadFile(
-			path.join(__dirname, `../renderer/index.html`)
+			path.join(__dirname, `../index.html`)
 		);
 	}
 

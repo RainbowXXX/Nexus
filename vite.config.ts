@@ -6,7 +6,7 @@ export default defineConfig({
 	base: './',
 	plugins: [react()],
 	build: {
-		outDir: '.vite/renderer', // 输出目录
+		outDir: '.vite', // 输出目录
 		minify: 'terser',
 		rollupOptions: {
 			input: {
