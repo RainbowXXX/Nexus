@@ -79,7 +79,7 @@ function createWindow() {
 		} : {})
 	});
 
-	if(process.platform !== 'darwin') {
+	if (process.platform !== 'darwin') {
 		mainWindow.setTitleBarOverlay({
 			color: 'black',
 			symbolColor: 'white'
@@ -114,8 +114,8 @@ function createWindow() {
 
 	tray = new Tray(image)
 	const contextMenu = Menu.buildFromTemplate(menuTemplate)
-	tray.setTitle('test tray')
-	tray.setToolTip('This is my application.')
+	tray.setTitle('Nexus')
+	tray.setToolTip('Nexus')
 	tray.setContextMenu(contextMenu)
 }
 
