@@ -7,6 +7,7 @@ import registerListeners from "./ipc/listeners-register";
 import { monutWindowExtension } from "./extensions/windowExtension";
 import { mountStore, unmountStore } from "./extensions/storeExtension";
 import { DEFAULT_HEIGHT, DEFAULT_MIN_HEIGHT, DEFAULT_MIN_WIDTH, DEFAULT_WIDTH } from "../lib/constants";
+import * as electron from "electron";
 
 log.initialize()
 log.info('应用启动');
@@ -56,6 +57,8 @@ const menuTemplate: (Electron.MenuItemConstructorOptions | Electron.MenuItem)[] 
 
 function createWindow() {
 	const preload = path.join(__dirname, "preload.js");
+	const image = electron.nativeImage.createFromPath("assets/images/icon.ico");
+
 	mainWindow = new BrowserWindow({
 		width: DEFAULT_WIDTH,
 		height: DEFAULT_HEIGHT,
@@ -70,7 +73,7 @@ function createWindow() {
 			preload: preload,
 		},
 		titleBarStyle: "hidden",
-		icon: 'assets/images/icon.ico',
+		icon: image,
 		...(process.platform !== 'darwin' ? {
 			titleBarOverlay: true
 		} : {})
@@ -109,7 +112,7 @@ function createWindow() {
 	// }
 	checkForUpdates()
 
-	tray = new Tray('assets/images/icon.ico')
+	tray = new Tray(image)
 	const contextMenu = Menu.buildFromTemplate(menuTemplate)
 	tray.setTitle('test tray')
 	tray.setToolTip('This is my application.')
