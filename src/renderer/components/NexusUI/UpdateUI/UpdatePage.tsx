@@ -1,13 +1,43 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import styles from "@/styles/NexusUI/Update.module.css";
+import { ipcRenderer } from "electron";
+import { UpdateInfo } from "electron-updater";
+import Result from "../../../../lib/utils";
+import { ProgressInfo } from "electron-builder";
 
 export default function NewUpdatePage({ setUpdatePageOpen }: { setUpdatePageOpen: (_: boolean) => void }) {
     let updateStatus = 'ready'
     const [progressValue, setProgressValue] = useState(0);
-    const handleUpdateClick = () => {
-        console.log('按钮点击');
-        setProgressValue(prev => Math.min(prev + 20, 100));
-    }
+
+	const replyToMain = (channel: string, data: Result) => {
+		ipcRenderer.send('update', channel, JSON.stringify(data));
+	}
+
+	useEffect(() => {
+		ipcRenderer.on('update', (event, event_type, info: Result) => {
+			switch (event_type) {
+				case 'update-available': {
+					replyToMain(event_type, Result.Some(true))
+					return
+				}
+				case 'download-progress': {
+					const res = info as Result<ProgressInfo>
+					if(!res.hasValue()) return;
+					const updateInfo = res.getData();
+					setProgressValue(prev => Math.min(updateInfo.percent, 100));
+					return
+				}
+				default: {
+					return;
+				}
+			}
+		})
+	}, []);
+
+	const handleUpdateClick = () => {
+		replyToMain('update-available', Result.Some(true));
+	}
+
     return (
         <div className={styles.card}>
             <div className={styles.title}>版本更新</div>
