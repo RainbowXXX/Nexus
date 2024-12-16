@@ -1,0 +1,72 @@
+.card,
+.infoBox {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.title {
+    font-size: large;
+    font-weight: bolder;
+}
+
+.infoBox {
+    flex: 1;
+    width: 70%;
+}
+
+.versionBox {
+    width: 100%;
+}
+
+.downloadProgressBox {
+    margin-top: 20px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.progressBox {
+    display: flex;
+    gap: 5px;
+    justify-content: center;
+    align-items: center;
+}
+
+.progress {
+    width: 100%;
+    height: 10px;
+    border: none;
+    border-radius: 10px;
+    background-color: #e0e0e0;
+    transition: all 0.5s ease-in-out;
+}
+
+.progress::-webkit-progress-bar {
+    border-radius: 10px;
+    /* 圆角（Chrome、Safari） */
+    background-color: #e0e0e0;
+    transition: all 0.5s ease-in-out;
+}
+
+.progress::-webkit-progress-value {
+    border-radius: 10px;
+    /* 圆角（Chrome、Safari） */
+    background-color: #76c7c0;
+    transition: all 0.5s ease-in-out;
+}
+
+.progress::-moz-progress-bar {
+    border-radius: 10px;
+    /* 圆角（Firefox） */
+    background-color: #76c7c0;
+    transition: all 0.5s ease-in-out;
+}
+
+.percentage {
+    text-align: end;
+    width: 3rem;
+}

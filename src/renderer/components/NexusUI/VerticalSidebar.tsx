@@ -1,10 +1,11 @@
 import React, { useContext, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { LogIn, LogOut, Settings } from "lucide-react";
+import { LogIn, LogOut, Settings, SquareArrowDown } from "lucide-react";
 
 import styles from "@/styles/NexusUI/VerticalSidebar.module.css";
 import SettingArea from "@/components/NexusUI/SettingUI/SettingArea";
+import UpdatePage from "@/components/NexusUI/UpdateUI/UpdatePage";
 
 import {
 	Dialog,
@@ -21,6 +22,7 @@ import { DialogContentWithoutClose } from "@/components/NexusUI/components/Dialo
 export default function VerticalSidebar() {
 	const [showLogin, setShowLogin] = useState(false);
 	const [isSettingOpen, setIsSettingOpen] = useState(false);
+	const [isUpdateOpen, setIsUpdateOpen] = useState(false);
 
 	const chatInfo = useContext(ChatInfoContext);
 	const isLoggedIn = chatInfo.connected;
@@ -44,8 +46,8 @@ export default function VerticalSidebar() {
 					openDevTools();
 				}}
 			>
-				<AvatarImage src={ chatInfo.curUserInfo?.avatar ?? "/placeholder.svg?height=40&width=40" } alt="User" />
-				<AvatarFallback style={{userSelect:'none'}}> { chatInfo.curUserInfo?.name[0] ?? 'U' } </AvatarFallback>
+				<AvatarImage src={chatInfo.curUserInfo?.avatar ?? "/placeholder.svg?height=40&width=40"} alt="User" />
+				<AvatarFallback style={{ userSelect: 'none' }}> {chatInfo.curUserInfo?.name[0] ?? 'U'} </AvatarFallback>
 			</Avatar>
 			<div className={styles.spacer}></div>
 
@@ -54,14 +56,14 @@ export default function VerticalSidebar() {
 					<LogOut className={styles.settingsIcon} />
 				</Button>
 			) : (
-				<Button variant="ghost" size="icon" className={styles.settingsButton} onClick={() => setShowLogin(true) } aria-label="Login">
+				<Button variant="ghost" size="icon" className={styles.settingsButton} onClick={() => setShowLogin(true)} aria-label="Login">
 					<LogIn className={styles.settingsIcon} />
 				</Button>
 			)}
 
 			<Dialog open={showLogin && !isLoggedIn} onOpenChange={setShowLogin} >
-				<DialogTitle/>
-				<DialogContent className="p-0" style={{width: '80%', height: '75%'}} aria-describedby={undefined} >
+				<DialogTitle />
+				<DialogContent className="p-0" style={{ width: '80%', height: '75%' }} aria-describedby={undefined} >
 					<LoginArea
 						loginCallback={(isOk) => {
 							setShowLogin(!isOk)
@@ -70,15 +72,27 @@ export default function VerticalSidebar() {
 				</DialogContent>
 			</Dialog>
 
+			<Dialog open={isUpdateOpen} onOpenChange={setIsUpdateOpen} >
+				<DialogTitle />
+				<DialogTrigger asChild>
+					<Button variant="ghost" size="icon" className={styles.settingsButton} aria-label="Settings">
+						<SquareArrowDown className={styles.settingsIcon} />
+					</Button>
+				</DialogTrigger>
+				<DialogContentWithoutClose className="p-0" style={{ width: '60%', height: '50%' }} aria-describedby={undefined} >
+					<UpdatePage setUpdatePageOpen={setIsUpdateOpen} />
+				</DialogContentWithoutClose>
+			</Dialog>
+
 			<Dialog open={isSettingOpen} onOpenChange={setIsSettingOpen} >
-				<DialogTitle/>
+				<DialogTitle />
 				<DialogTrigger asChild>
 					<Button variant="ghost" size="icon" className={styles.settingsButton} aria-label="Settings">
 						<Settings className={styles.settingsIcon} />
 					</Button>
 				</DialogTrigger>
-				<DialogContentWithoutClose className="p-0" style={{width: '80%', height: '75%'}} aria-describedby={undefined} >
-					<SettingArea setSettingAreaOpen={setIsSettingOpen}/>
+				<DialogContentWithoutClose className="p-0" style={{ width: '80%', height: '75%' }} aria-describedby={undefined} >
+					<SettingArea setSettingAreaOpen={setIsSettingOpen} />
 				</DialogContentWithoutClose>
 			</Dialog>
 		</div>
