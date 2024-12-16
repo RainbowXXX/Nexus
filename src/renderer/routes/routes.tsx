@@ -1,5 +1,4 @@
 import { createRoute } from "@tanstack/react-router";
-import HomePage from "../pages/HomePage";
 import { RootRoute } from "./__root";
 import MainPage from "../pages/MainPage";
 import ErrorPage from "@/pages/ErrorPage";
@@ -31,11 +30,4 @@ export const HomeRoute = createRoute({
 	errorComponent: ErrorPage,
 });
 
-export const AboutRoute = createRoute({
-    getParentRoute: () => RootRoute,
-    path: "/about",
-    component: HomePage,
-    // component: AboutPage,
-});
-
-export const rootTree = RootRoute.addChildren([HomeRoute, AboutRoute]);
+export const rootTree = RootRoute.addChildren([HomeRoute]);

@@ -1,6 +1,6 @@
 import { BrowserWindow } from "electron";
 
-export function monutWindowExtension(window: BrowserWindow) {
+export function mountWindowExtension(window: BrowserWindow) {
 
 	// 获取窗体信息
 	const getWindowInfo = (mainWindow: BrowserWindow): WindowStatus => {

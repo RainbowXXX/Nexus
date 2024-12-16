@@ -31,13 +31,13 @@ const storage: StoreObject = {
 	},
 }
 
-export function mountStore(_: BrowserWindow) {
+export function mountStoreExtension(_: BrowserWindow) {
 	if(fs.existsSync(dataFile)) {
 		map = JSON.parse(fs.readFileSync(dataFile, 'utf-8'));
 	}
 }
 
-export function unmountStore() {
+export function unmountStoreExtension() {
 	fs.writeFileSync(dataFile, JSON.stringify(map));
 }
 
