@@ -44,3 +44,37 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional eslint cache
+.eslintcache
+
+# Optional stylelint cache
+.stylelintcache
+
+# Environment variables
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
+
+# Tauri specific
+src-tauri/target/
+src-tauri/Cargo.lock
+
+# Build artifacts
+tauri.conf.json.bak
+
+# Temporary files
+.tmp
+.temp
+
+# Local development
+.local
+
+# Coverage reports
+coverage
+*.lcov
